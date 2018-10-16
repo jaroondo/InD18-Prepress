@@ -1,0 +1,2483 @@
+﻿// © 2018 Ing. Jaroslav ONDO
+/**
+* @@@BUILDINFO@@@ PrepressLib.jsx !Version! Tue Oct 16 2018 07:38:16 GMT+0200
+*/
+
+#script "Prepress Library"
+#targetengine "session"
+
+// PREMENNE
+var myScript = myGetScriptPath();
+var myParentFolder = File(myScript).parent.parent;
+var imagesFolder = myParentFolder + "/Prepress/";
+var myDocument = {};
+var artworkFile = new File(); //"D:/!DATA/!Export/composit KU korunka CP.pdf"
+var artworkRotationAngle = 0;
+var printingPlate = new PrintingPlate(); // platňa
+var dieSet = new DieSet(); // výsek
+var dh = new DataHolder (); // vytvorenie objektu
+var mySwatch = {};
+var myColor = {};
+var myObjectStyle = {};
+var myParagraphStyle = {};
+var myCharacterStyle = {};
+var myTextVariable = {};
+var myLinkXmp = {};
+var myXmpInksCount = 0;
+var myXmpProperty = "";
+var myPath = "";
+var myStr = "";
+var mySubStr = "";
+var myXmpProcessInksCount = 0;
+var myXmpUsedInksCount = 0;
+var myXMPSpotInksCount =0;
+var myProcessInksTintList = [0,0,0,0];
+var myMixedInk = {};
+var myInk = {};
+var myMixedInksTintList = [];
+var myMixedInksList = [];
+var myTint = {};
+var egInks = new EgInks();
+var scaleStrip = new ScaleStrip();
+var progWin = createProgressWindow ();
+var message = progWin.children[0];
+var pbar = progWin.children[1];
+var myLinkedFile = {};
+var xmpLinkedFile = {};
+var myLinkedXmp = {};
+//
+// OBJEKTY
+function PrintingPlate() { /*definicia objektu tlačiarenska platňa*/
+    this.id = 0;
+    this.name = "LTG";
+    this.width = 1160.00; /*šírka strany*/
+    this.height = 1030.00; /*výška strany*/
+    this.printingStart = 40.5; /*vodorovné vodítko, zaciatok tlace od spodnej hrany platne*/
+    this.gripperEdge = 4.5; /*nepotlačená plocha*/
+    this.sheetWidth = 1038.00; /*okraje stránky*/
+    this.sheetHeight = 893.2; /*okraje stránky*/
+    this.bottomPrinting = false;
+    this.getSheetBottom = function () { /* spodný okraj harku (vzdialenost hárku od grajfu)*/
+        return this.printingStart - this.gripperEdge; 
+    };
+	this.getSheetTop = function () { /*horny okraj harku*/
+        return (this.height - this.getSheetBottom() - this.sheetHeight); 
+    };
+	this.getSheetLeft = function () { /*lavy okraj harku*/
+        return (this.width - this.sheetWidth) / 2; 
+    };
+	this.getSheetRight = function () { /*pravy okraj harku*/
+        return (this.width - this.sheetWidth) / 2; 
+    };
+    this.getSheetRightX = function () { /*lava suradnica harku*/
+        return (this.width - this.getSheetRight ()); 
+    };
+    this.getSheetBottomY = function () { /*spodna suradnica harku*/
+        return (this.height - this.getSheetBottom ()); 
+    };
+    this.sheetCornerLength = 0;
+    this.sheetCornerThickness = 0;
+    this.sheetCorners = {}; /*odkaz na skupinu page items*/
+    this.sheetNegativeInksEater = {}; /*odkaz na page item*/
+    this.sheetInksEater = {}; /*odkaz na page item*/
+    this.sheetLithoMark = {}; /*odkaz na page item*/
+};
+function OneUp() { /*definicia objektu artworku*/
+    this.id = 0; /*poradové číslo 1 - 729*/
+    this.punchNumber = 0; /*číslo razníka 1 - 27*/
+    this.stepNumber = 0; /*číslo kroku 1 - 27*/
+    this.cutDiameter = 37.35;
+	this.getCutRadius = function() {
+		return this.cutDiameter / 2;
+	};
+    this.bleedDiameter = 40.00;
+    this.getBleed = function () {
+        return (this.bleedDiameter - this.cutDiameter)/2;
+    };
+    this.centerX = 0.0;
+    this.centerY = 0.0;
+    this.getLeft = function () {
+        return this.centerX - this.getCutRadius();
+    };
+    this.getRight = function () {
+        return this.centerX + this.getCutRadius();
+    };
+    this.getTop = function () {
+        return this.centerY - this.getCutRadius();
+    };
+    this.getBottom = function () {
+        return this.centerY + this.getCutRadius();
+    };
+    this.bleed = {}; /*odkaz na page item*/
+    this.getArtwork = function () { /*odkaz na vlozenu grafiku*/
+        return this.bleed.allGraphics[0]; 
+    };
+    this.cropMark = {}; /*odkaz na page item*/
+    this.punchNumFrame = {}; /*odkaz na text frame*/
+    this.logo = {}; /*odkaz na page item*/
+};
+function DieSet() { /*definicia array-like objektu - výsek*/
+    this.masterOneUp = new OneUp();
+    this.punchDieCount = 27;
+    this.punchHorizontalOffset = 18.872;
+    this.punchVerticalOffset = 32.687;
+    this.punchStepCount = 27;
+    this.punchStepWidth = 37.744;
+	this.getWidth = function () {
+		return this.punchStepWidth * (this.punchStepCount - 1) + this.punchHorizontalOffset + this.masterOneUp.cutDiameter;
+	};
+	this.getHeight = function () {
+		return this.punchVerticalOffset * (this.punchDieCount - 1) + this.masterOneUp.cutDiameter;
+	};
+	this.getBottom = function() {
+		return printingPlate.height - printingPlate.printingStart;
+	};
+	this.getTop = function() {
+		return this.getBottom() - this.getHeight();
+	};
+	this.getLeft = function() {
+		return (printingPlate.width - this.getWidth()) / 2;
+	};
+	this.getRight = function() {
+		return this.getLeft() + this.getWidth();
+	};
+    this.length = 0;
+    this.punchCounter = 0;
+    this.stepCounter = 1;
+    this.topPunchNumber = 14;
+    this.getFirstX = function () {
+        var result = 0;
+        if (printingPlate.bottomPrinting == true) {
+            result =  this.getRight() - this.masterOneUp.getCutRadius();
+        } else {
+            result = this.getLeft() + this.masterOneUp.getCutRadius();
+        };
+        return result;
+    };
+    this.centerXCounter = this.getFirstX();
+    this.centerYCounter = this.getTop() + this.masterOneUp.getCutRadius() + this.punchVerticalOffset;
+    this.oneUp = [];
+    this.addOneUp = function () { /*funkcia pridá 1 artwork do vyseku*/
+        var i = this.length;
+        this.oneUp[i] = new OneUp();
+        this.length++;
+        this.oneUp[i].id = i + 1;
+        this.punchCounter++;
+        if (this.punchCounter > this.punchDieCount) { /*krokovanie raznika*/
+            this.punchCounter = 1;
+            this.stepCounter++
+        };
+        this.oneUp[i].punchNumber = this.punchCounter;
+        this.oneUp[i].stepNumber = this.stepCounter;
+        this.oneUp[i].centerX = this.centerXCounter;
+        this.oneUp[i].centerY = this.centerYCounter;
+        if (this.oneUp[i].punchNumber == this.topPunchNumber - 1) { /*krokovanie X suradnice stredu*/
+            if (printingPlate.bottomPrinting == true) {
+                this.centerXCounter =  this.centerXCounter - this.punchHorizontalOffset;
+            } else {
+                this.centerXCounter =  this.centerXCounter + this.punchHorizontalOffset;
+            };
+        } else if (this.oneUp[i].punchNumber == this.punchDieCount) {
+            if (printingPlate.bottomPrinting == true) {
+                this.centerXCounter =  this.centerXCounter + this.punchHorizontalOffset - this.punchStepWidth;
+            } else {
+                this.centerXCounter =  this.centerXCounter - this.punchHorizontalOffset + this.punchStepWidth;
+            };
+        };
+        if (this.oneUp[i].punchNumber == this.topPunchNumber - 1) { /*krokovanie Y suradnice stredu*/
+            this.centerYCounter = this.getTop() + this.masterOneUp.getCutRadius();
+        } else if (this.oneUp[i].punchNumber == this.punchDieCount) {
+            this.centerYCounter = this.getTop() + this.masterOneUp.getCutRadius() +this.punchVerticalOffset;    
+        } else {
+			this.centerYCounter = this.centerYCounter + (2 * this.punchVerticalOffset);
+        };
+	};
+    this.fillDieSet = function () { /*vyplni cely vysek*/
+        for (var i = 0; i < this.punchDieCount * this.punchStepCount; i++) {
+            this.addOneUp();
+        };
+    };
+};
+function DataHolder () { // definicia objektu zasobnik dat
+    this.plateName = "plate name";
+    this.bottomPrint = false;
+    this.plateWidth = 0.0;
+    this.plateHight = 0.0;
+    this.printStart = 0.0;
+    this.sheetWidth = 0.0;
+    this.sheetHight = 0.0;
+    this.gripperWidth = 0.0;
+    this.cutDiameter = 0;
+    this.bleedDiameter = 0;
+    this.punchDieCount = 0;
+    this.dieHorizontalOffset = 0;
+    this.dieVerticalOffset = 0;
+    this.topDieNumber = 0;
+    this.punchStepWidth = 0;
+    this.punchStepCount = 0;
+    this.artworkFile = new File();
+    this.artworkAngle = 0;
+    this.cropMarkLength = 0;
+    this.cropMarkThickness = 0;
+    this.punchNumAngle = 0;
+    this.punchNumSize = 0;
+    this.punchNumOffset = 0;
+    this.logoName = "";
+    this.logoAngle = 0;
+    this.logoOffset = 0;
+    this.sheetCornerLength = 0;
+    this.sheetCornerThickness = 0;
+};
+function EgInk() { //definicia objektu esko graphics ink
+	this.id = 0;
+	this.name = ""; // black, Black, Black 6
+	this.type = ""; // process, pantone, designer
+	this.book = ""; // process, pms1000c, none
+	this.egname = ""; // meno výťažku (ink), môže sa líšiť od name 
+	this.frequency = 0.0; // ink coverage
+	this.angle = 0.0; // scale number (Plato), pre InDD nepoužite
+	this.dotshape = ""; // "" (none = negativ), string (pozitiv)
+	this.r = 0.0; // Rgb godnota
+	this.g = 0.0; // rGb hodnota
+	this.b = 0.0; // rgB hodnota
+	this.attribute = ""; // normal, opaque, varnish, technical
+	this.printingmethod = ""; // unknown, string
+     this.swatch = {};
+     this.setColors = function () { // vyhlada a priradi swatch, ink
+        var egName = this.egname //.toLowerCase();
+        var swatchName = "";
+        for (var j = 0; j < mySwatch.count(); j++) {
+            swatchName = mySwatch[j].name //.toLowerCase();
+            if (this.type == "pantone") { // ak ide o pantone farbu
+                egName = "PANTONE " + this.egname;
+            };
+            if (this.attribute != "technical" && swatchName.indexOf(egName) >= 0) { // ak sa nejedna o technicku farbu a nasiel zhodu mena priradi swatch ku egInk.swatch
+                this.swatch = mySwatch[j];
+                this.ink = myInk.itemByName(mySwatch[j].name);
+                this.inkName = myInk.itemByName(mySwatch[j].name).name;
+                break
+            } else if (this.type == "process" && egName.indexOf("cyan") >= 0) { //ak nenašiel jedna sa o procesnu, vytvori CMYK swatch a priradi ku egInk
+                createProcessSwatch (egName, [100,0,0,0]);
+                this.swatch = mySwatch.itemByName(egName);
+                this.ink = myInk[0];
+                this.inkName = myInk[0].name;
+                break
+            } else if (this.type == "process" && egName.indexOf("magenta") >= 0) {
+                createProcessSwatch (egName, [0,100,0,0]);
+                this.swatch = mySwatch.itemByName(egName);
+                this.ink = myInk[1];
+                this.inkName = myInk[1].name;
+                break
+            } else if (this.type == "process" && egName.indexOf("yellow") >= 0) {
+                createProcessSwatch (egName, [0,0,100,0]);
+                this.swatch = mySwatch.itemByName(egName);
+                this.ink = myInk[2];
+                this.inkName = myInk[2].name;
+                break
+            } else if (this.type == "process" && egName.indexOf("black") >= 0) {
+                this.swatch = mySwatch[3]; 
+                this.ink = myInk[3];
+                this.inkName = myInk[3].name;
+                break
+            };        
+        };
+      //$.writeln(this.id + " " + this.name + " / " + this.egname + " / " + this.inkName + " / " + this.swatch.name + " / " + this.ink.name);
+     };
+     this.negativeEaterFilterCondition = function () {
+        return (this.attribute != "technical" && this.dotshape.length == 0);
+     };
+     this.positiveInksFilterCondition = function () {
+        return (this.attribute != "technical" && this.dotshape.length > 0);
+     };
+     this.usedInksFilterCondition = function () {
+        return (this.attribute != "technical");
+     };
+     this.crossMarkACondition = function () {
+        return (this.attribute != "technical" && this.name.search("_1") == -1);
+     };
+     this.negativeInksFilterCondition = function () {
+        return (this.attribute != "technical" && this.dotshape.length == 0);
+     };
+     this.ink = {};
+     this.inkName = "";
+     this.tint = 0;
+     this.setTint = function () {
+        if (this.dotshape.length > 0) { 
+            this.tint = 100;
+        }  else { 
+            this.tint = 0;
+        };
+        if (this.type == "process") {
+            switch (this.name.toLowerCase()) {
+               case "cyan":
+                  myProcessInksTintList[0] = this.tint;
+                  break;
+               case "magenta":
+                  myProcessInksTintList[1] = this.tint;
+                  break;
+               case "yellow":
+                  myProcessInksTintList[2] = this.tint;
+                  break;
+               case "black":
+                  myProcessInksTintList[3] = this.tint;
+                  break;
+            };
+        };
+     };
+};
+function EgInks() { //definicia array-like objektu esko graphic inks
+	this.length = 0;
+	this.add = function () { // funkcia pridat novy ink
+		var i = this.length;
+		this[i] = new EgInk();
+		this[i].id = i;
+		this.length++;
+	};
+	this.lastItem = function () { // funkcia vrati poslednu polozku
+		var i = this.length;
+		if (i > 0) {
+			return this[i-1];
+		} else { alert("egInks.length = 0, nema ziadnu polozku")};
+	};
+	this.compare = function (outKey, key, condition, value) { // vrati vsetky id ako pole podla hodnoty kluca
+		var result = [];
+		for (var i = 0; i < this.length; i++) {
+			switch (condition) {
+				case ">":
+					if (this[i][key] > value) {
+						result[result.length] = this[i][outKey];
+					};
+					break;
+				case ">=":
+					if (this[i][key] >= value) {
+						result[result.length] = this[i][outKey];
+					};
+					break;
+				case "<":
+					if (this[i][key] < value) {
+						result[result.length] = this[i][outKey];
+					};
+					break;
+				case "<=":
+					if (this[i][key] <= value) {
+						result[result.length] = this[i][outKey];
+					};
+					break;
+				default:
+					if (this[i][key] == value) {
+						result[result.length] = this[i][outKey];
+					};
+			};
+		};
+		return result;
+	};
+	this.getColumn = function (outKey) { // vrati vsetky hodnoty kluca ako pole
+		var result = [];
+		for (var i = 0; i < this.length; i++) {
+			result[result.length] = this[i][outKey];
+		};
+		return result;
+	};
+	this.getKey = function (outKey, inKey, inValue) { // vrati polozky podla hodnoty kluca
+		var result = [];
+		for (var i = 0; i < this.length; i++) {
+			if (this[i][inKey] == inValue) {
+				result[result.length] = this[i][outKey];
+			};
+		};
+		return result;
+	};
+	this.getMax = function (outKey, maxKey) { //vrati polozku s max hodnotou kluca maxKey
+		var result = [];
+		var maxIndex = 0;
+		var maxValue = this[maxIndex][maxKey];
+		for (var i = 0; i < this.length; i++) {
+			if (typeof this[i][maxKey] == "number" && this[i][maxKey] > maxValue) {
+				maxValue = this[i][maxKey];
+				maxIndex = i;
+			};
+		};
+		result[result.length] = this[maxIndex][outKey];
+		return result;
+	};
+     this.getDarkest = function (outKey, filterCondition) { //vrati najtmavsiu polozku
+		var result = [];
+         var usedInks = this.filter("ink", filterCondition);
+         var usedIndex = this.filter("id", filterCondition);
+         if (usedInks.length > 0) {
+            var maxIndex = usedIndex[0];
+            var maxValue = usedInks[0].neutralDensity;
+            for (var i in usedInks) {
+                if (usedInks[i].neutralDensity > maxValue) {
+                    maxValue = usedInks[i].neutralDensity;
+                    maxIndex = usedIndex[i];
+                };
+            };
+            result[result.length] = this[maxIndex][outKey];
+         };
+		return result;
+	};
+	this.getMin = function (outKey, minKey) { // vrati polozku s min hodnotou kluca minKey
+		var result = [];
+		var minIndex = 0;
+		var minValue = this[minIndex][minKey];
+		for (var i = 0; i < this.length; i++) {
+			if (typeof this[i][minKey] == "number" && this[i][minKey] < minValue) {
+				minValue = this[i][minKey];
+				minIndex = i;
+			};
+		};
+		result[result.length] = this[minIndex][outKey];
+		return result;
+	};
+    this.getLightest = function (outKey, filterCondition) { // vrati najsvetlejsiu polozku
+		var result = [];
+         var usedInks = this.filter("ink", filterCondition);
+         var usedIndex = this.filter("id", filterCondition);
+         if (usedInks.length > 0) {
+            var minIndex = usedIndex[0];
+            var minValue = usedInks[0].neutralDensity;
+            for (var i in usedInks) {
+                if (usedInks[i].neutralDensity < minValue) {
+                    minValue = usedInks[i].neutralDensity;
+                    minIndex = usedIndex[i];
+                };
+            };
+            result[result.length] = this[minIndex][outKey];
+         };
+		return result;
+	};
+	this.getSubStr = function (outKey, inKey, subStr) { // vrati polozky obsahujuce substring
+		var result = [];
+		for (var i = 0; i < this.length; i++) {
+			if (typeof this[i][inKey] == "string" && this[i][inKey].search(subStr) >=0 ) {
+				result[result.length] = this[i][outKey];
+			};
+		};
+		return result;
+	};
+    this.getInvertKey = function (outKey, inKey, inValue) { // vrati polozky rozdielne od hodnoty kluca
+		var result = [];
+		for (var i = 0; i < this.length; i++) {
+			if (this[i][inKey] != inValue) {
+				result[result.length] = this[i][outKey];
+			};
+		};
+		return result;
+	};
+    this.filter = function (outKey, filterCondition) { // vrati polozky podla filtra
+		var result = [];
+		for (var i = 0; i < this.length; i++) {
+			if (this[i][filterCondition]()) {
+				result[result.length] = this[i][outKey];
+			};
+		};
+		return result;
+	};
+};
+function ScaleItem() { // definicia objektu polozka skaly
+    this.id = 0;
+    this.swatch = {};
+    this.style = {};
+};
+function ScaleStrip() { // definicia array-like objektu opakujuci sa pasik skaly
+    this.length = 0;
+    this.add = function () { // funkcia pridat novu polozku
+		var i = this.length;
+		this[i] = new ScaleItem();
+		this[i].id = i;
+		this.length++;
+	};
+    this.lastItem = function () { // funkcia vrati poslednu polozku
+		var i = this.length;
+		if (i > 0) {
+			return this[i-1];
+		} else { alert("scaleStrip.length = 0, nema ziadnu polozku")};
+	};
+};
+//
+// METODY
+function myGetScriptPath() {
+    try{
+        return app.activeScript;
+    }
+    catch(myError){
+        return File(myError.fileName);
+    }
+};
+function getOneUp (die, step) { /*vrati objekt  oneup podla cisla*/
+        var result = {};
+        for (var i = 0; i < dieSet.length; i++) {
+            if (dieSet.oneUp[i].punchNumber == die & dieSet.oneUp[i].stepNumber == step) {
+                result = dieSet.oneUp[i];
+                break;
+            };
+        };
+        return result;
+};
+function makePlate () { // nastavy platnu
+    with ( myDocument.viewPreferences) { // jednotky a pociatok
+        horizontalMeasurementUnits = MeasurementUnits.MILLIMETERS;
+        verticalMeasurementUnits = MeasurementUnits.MILLIMETERS;
+        rulerOrigin = RulerOrigin.pageOrigin;
+    };
+    myDocument.zeroPoint = [0, 0];
+    with (myDocument.documentPreferences) { // rozmery platne (strany)
+        pageHeight = printingPlate.height;
+        pageWidth = printingPlate.width;
+    };
+    with (myDocument.pages.item(0).marginPreferences) { // rozmery harku (okraje)
+        top = printingPlate.getSheetTop();
+        bottom = printingPlate.getSheetBottom();
+        left = printingPlate.getSheetLeft();
+        right = printingPlate.getSheetRight();
+    };
+    myDocument.guides.add({orientation: HorizontalOrVertical.HORIZONTAL, location: printingPlate.height - printingPlate.printingStart}); //  Voditko začiatok tlače
+    myDocument.guides.add({orientation: HorizontalOrVertical.VERTICAL, location: printingPlate.width / 2}); // Voditko vertikalny stred platne
+    myDocument.guides.add({orientation: HorizontalOrVertical.HORIZONTAL, location: printingPlate.getSheetTop() + printingPlate.sheetHeight/2}); // Voditko horizontalny stred harku
+};
+function drawBkgr () { // nakresli vrstvu pozadie
+    // negativne pasy
+    myDocument.layers[0].name = "Bkgr";
+    myDocument.activeLayer = myDocument.layers.itemByName("Bkgr");
+    myColor = myDocument.swatches[3];
+    myObjectStyle = myDocument.objectStyles.add({name: "NegativeInksEater", strokeWeight: 0, fillColor: myColor});
+    myDocument.rectangles.add({ 
+        name: "negativeInksEater",
+        geometricBounds: [printingPlate.getSheetTop (), printingPlate.getSheetLeft (), printingPlate.getSheetBottomY (), printingPlate.getSheetRightX ()],
+    });
+    myDocument.rectangles.add({ 
+        name: "rct2",
+        geometricBounds: [printingPlate.getSheetTop (), (getOneUp (1, 1).centerX + getOneUp (14, 1).centerX)/2, printingPlate.getSheetBottomY (), (getOneUp (13, 27).centerX + getOneUp (14, 27).centerX)/2],
+    });
+    makeSubtract ("negativeInksEater", "rct2");
+    printingPlate.sheetNegativeInksEater = getPageItem ("negativeInksEater");
+    printingPlate.sheetNegativeInksEater.applyObjectStyle(myObjectStyle);
+    //  ink eater
+    myColor = myDocument.swatches[3];
+    myObjectStyle = myDocument.objectStyles.add({name: "InksEater", strokeWeight: 0, fillColor: myColor});
+    myDocument.rectangles.add({ 
+        name: "inksEater",
+        geometricBounds: [getOneUp (14, 1).centerY, (getOneUp (1, 1).centerX + getOneUp (14, 1).centerX)/2, getOneUp (27, 1).centerY, (getOneUp (13, 27).centerX + getOneUp (14, 27).centerX)/2],
+    });
+    printingPlate.sheetInksEater = getPageItem ("inksEater");
+    printingPlate.sheetInksEater.applyObjectStyle(myObjectStyle);
+    // litho mark
+    myColor = myDocument.swatches[3];
+    myObjectStyle = myDocument.objectStyles.add({name: "LithoMark", strokeWeight: 0, fillColor: myColor});
+    if (dh.bottomPrint == true) {
+        myDocument.rectangles.add({ 
+            name: "lithoMark",
+            geometricBounds: [getOneUp (20, 27).centerY, printingPlate.getSheetLeft(), getOneUp (21, 27).centerY, (getOneUp (7, 27).centerX + getOneUp (20, 27).centerX)/2]
+        });
+    } else {
+        myDocument.rectangles.add({ 
+            name: "lithoMark",
+            geometricBounds: [getOneUp (20, 27).centerY, (getOneUp (7, 27).centerX + getOneUp (20, 27).centerX)/2, getOneUp (21, 27).centerY, printingPlate.getSheetRightX ()]
+        });
+    };
+    printingPlate.sheetLithoMark = getPageItem ("lithoMark");
+    printingPlate.sheetLithoMark.applyObjectStyle(myObjectStyle);
+};
+function addCircle (centerX, centerY, diameter, newIdentity) { // prida kruh
+    var radius = diameter/2;
+	myDocument.ovals.add({
+        rotationAngle: 0, // natocenie celeho kruhu aj s jeho buducim obsahom
+        geometricBounds: [centerY - radius, centerX - radius, centerY + radius, centerX + radius], 
+        name: newIdentity,
+        label: "[" + centerX + ", " + centerY + "]",
+        strokeWeight: 0});
+};
+function addLine (centerX, centerY, offset, length, angle, newIdentity) { // prida linku; 0° vodorovne; + 90° hore; -90° dole
+    var radAngle = Math.PI / 180 * angle;
+    var deltaQx = (offset + length/2) * Math.cos(radAngle);
+    var deltaQy = (offset + length/2) * Math.sin(radAngle);
+    var y2 = centerY;
+    var x2 = centerX + length/2;
+    var y1 = centerY;
+    var x1 = centerX - length/2;
+    myDocument.graphicLines.add({
+        geometricBounds: [y1, x1, y2, x2],
+        absoluteRotationAngle: angle, // natocenie linky relativne ku jej kontajneru
+        name: newIdentity,
+        label: "[" + centerX + ", " + centerY + "]",
+        strokeWeight: 0});
+    var deltaX = deltaQx;
+    var deltaY = -deltaQy;
+    getPageItem(newIdentity).move(undefined, [deltaX, deltaY]);
+};
+function addHexagon (centerX, centerY, width, newIdentity) { // prida sesthran
+    var height = width * 1.154701;
+	myDocument.polygons.add({
+        numberOfSides: 6,
+        insetPercentage: 0,
+        rotationAngle: 90, 
+        geometricBounds: [centerY - width/2, centerX - height/2, centerY + width/2, centerX + height/2], 
+        name: newIdentity,
+        label: "[" + centerX + ", " + centerY + "]",
+        strokeWeight: 0});
+};
+function movePolygon (centerX, centerY, selection) { // posun polygonu
+    var polygonObject = getPageItem(selection);
+    var refPoint = app.doScript(polygonObject.label);
+    var deltaMove = [centerX - refPoint[0], centerY - refPoint[1]];
+    polygonObject.move(undefined, deltaMove);
+    polygonObject.label = "[" + centerX + ", " + centerY + "]";
+};
+function moveInside (refPointX, refPointY, childObject) { // posun centra objektu v kontajneri na globalnu referencnu surdnicu
+    var childBound = childObject.geometricBounds; // [y1, x1, y2, x2] topleft, bottomright
+    var parentBound = childObject.parent.geometricBounds;
+    var refPointUV = [refPointX - parentBound[1], refPointY - parentBound[0]]; // [x, y] lokalne suradnice referencneho bodu v ramci kontajnera
+    var childCenter = [(childBound[1]+childBound[3])/2, (childBound[0]+childBound[2])/2];  // [x, y] globalne suradnice stredu
+    var childCenterUV = [childCenter[0] - parentBound[1], childCenter[1] - parentBound[0]]; // [x, y] globalne suradnice stredu
+    var deltaMoveUV = [refPointUV[0] - childCenterUV[0], refPointUV[1] - childCenterUV[1]];
+    if (deltaMoveUV != [0, 0]) {
+        childObject.move(undefined, deltaMoveUV);
+    };
+    childObject.label = "[" + refPointX + ", " + refPointX + "]";
+};
+function duplicatePolygon (centerX, centerY, selection, newIdentity) {
+    var polygonObject = getPageItem(selection);
+    var refPoint = app.doScript(polygonObject.label);
+    var deltaMove = [centerX - refPoint[0], centerY - refPoint[1]];
+    var newPolygon = polygonObject.duplicate(undefined, deltaMove);
+    newPolygon.name = newIdentity;
+    newPolygon.label = "[" + centerX + ", " + centerY + "]";
+};
+function makeSubtract(selection, subtract) { // odpocita polygon
+	var result = getPageItem(selection);
+	var origName = result.name
+	var subtraction = getPageItem(subtract);
+	subtraction.subtractPath(result);
+	result.name = origName;
+};
+function makeIntersect(selection, intersect) { // prienik s polygonom
+	var result = getPageItem(selection);
+	var origName = result.name;
+	var intersection = getPageItem(intersect);
+	intersection.intersectPath(result);
+	result.name = origName;
+};
+function getPageItem (identity) { // vrati objekt podla mena
+    return myDocument.pageItems.itemByName(identity);
+};
+function makeGroup (selectList, newIdentity, refPoint) { //vytvori skupinu objektov
+    var pageItemsList = []; 
+    for (var i =0; i < selectList.length; i++) {
+        pageItemsList[i] = getPageItem (selectList[i]);
+    };
+    myDocument.groups.add(pageItemsList, {
+        name: newIdentity,
+        label: "[" + refPoint.toString() + "]"
+    });
+};
+function createCropMarksGroup (x, y, radius, length, thickness) {
+    try{
+        myObjectStyle = myDocument.objectStyles.itemByName("CutMarks"); 
+        myName = myObjectStyle.name;
+    } catch (myError){
+        myObjectStyle = myDocument.objectStyles.add({name: "CutMarks", strokeWeight: thickness, nonprinting: false});
+    };
+    try{
+        myLayer = myDocument.layers.itemByName("CutMarks"); 
+        myName = myLayer.name;
+    } catch (myError){
+        myLayer = myDocument.layers.add({name: "CutMarks"});
+    };
+    var offset = -length/2;
+    addLine (x, y, radius, length, 0, "T1");
+    getPageItem ("T1").applyObjectStyle(myObjectStyle);
+    addLine (x, y, radius, length, 180, "T3");
+    getPageItem ("T3").applyObjectStyle(myObjectStyle);
+    addLine (x, y, radius, length, 90, "T2");
+    getPageItem ("T2").applyObjectStyle(myObjectStyle);
+    addLine (x, y, radius, length, -90, "T4");
+    getPageItem ("T4").applyObjectStyle(myObjectStyle);
+    addLine (x + radius, y, offset, length, 90, "I1");
+    getPageItem ("I1").applyObjectStyle(myObjectStyle);
+    addLine (x - radius, y, offset, length, 90, "I3");
+    getPageItem ("I3").applyObjectStyle(myObjectStyle);
+    addLine (x, y - radius, offset, length, 0, "I2");
+    getPageItem ("I2").applyObjectStyle(myObjectStyle);
+    addLine (x, y + radius, offset, length, 0, "I4");
+    getPageItem ("I4").applyObjectStyle(myObjectStyle);
+    makeGroup (["T1", "T2", "T3", "T4", "I1", "I2", "I3", "I4"], "cmg", [x, y]);
+    //getPageItem ("cmg").applyObjectStyle(myObjectStyle);
+};
+function makeMask (x, y, start, repeat, identity) { // maska pridavku
+    addCircle (x, y, dieSet.masterOneUp.bleedDiameter, identity);
+    //getPageItem (identity).rotationAngle = 30; // natocenie kruhu aj s jeho buducim obsahom
+    app.pdfPlacePreferences.pdfCrop = 1131573325; // nastavenie orezu PDF na CROP_MEDIA
+    app.pdfPlacePreferences.transparentBackground = false; // vypne transparentne pozadie v PDF
+    getPageItem (identity).place(artworkFile);
+    //getPageItem (identity).allGraphics[0].rotationAngle = 30; // natocenie iba obsahu okolo jeho stredu
+    addCircle (x, y, dieSet.masterOneUp.bleedDiameter + 2, "crc");
+    addHexagon (x, y, dieSet.punchStepWidth, "hxg");
+    makeSubtract ("crc", "hxg");
+    var mask = getPageItem("crc");
+    for (var i = 0; i < repeat; i++) {
+        if (i < 6 - start ) {
+            mask.paths[start].remove();
+        } else {
+            mask.paths[0].remove();
+        };
+    };
+    makeSubtract (identity, "crc");
+};
+function makeCropMarksMask (x, y, start, repeat, identity) { // maska orezovych znaciek
+    createCropMarksGroup (0, 0, dieSet.masterOneUp.getCutRadius (), dh.cropMarkLength, dh.cropMarkThickness);
+    app.select(getPageItem ("cmg"));
+    app.cut();
+    addCircle (x, y, dieSet.masterOneUp.bleedDiameter, identity);
+    addCircle (x, y, dieSet.masterOneUp.bleedDiameter + 2, "crc");
+    addHexagon (x, y, dieSet.punchStepWidth, "hxg");
+    makeSubtract ("crc", "hxg");
+    var mask = getPageItem("crc");
+    for (var i = 0; i < repeat; i++) {
+        if (i < 6 - start ) {
+            mask.paths[start].remove();
+        } else {
+            mask.paths[0].remove();
+        };
+    };
+    makeSubtract (identity, "crc");
+    app.select(getPageItem (identity));
+    app.pasteInto();
+    moveInside (0, 0, getPageItem (identity).allPageItems[0]);
+};
+function makeBleedSet(centerX, centerY) { // vytvori vzorovu sadu koruniek
+    if (printingPlate.bottomPrinting == true) {
+        makeMask (centerX, centerY, 5, 3, "LT");
+        makeMask (centerX, centerY, 0, 2, "T");
+        makeMask (centerX, centerY, 0, 4, "RT");
+        makeMask (centerX, centerY, 4, 3, "LL");
+        makeMask (centerX, centerY, 5, 1, "LR");
+        makeMask (centerX, centerY, 0, 0, "M");
+        makeMask (centerX, centerY, 2, 1, "RL");
+        makeMask (centerX, centerY, 1, 3, "RR");
+        makeMask (centerX, centerY, 3, 3, "LB");
+        makeMask (centerX, centerY, 3, 2, "B");
+        makeMask (centerX, centerY, 1, 4, "RB");
+    } else {
+        makeMask (centerX, centerY, 0, 3, "LT");
+        makeMask (centerX, centerY, 0, 2, "T");
+        makeMask (centerX, centerY, 4, 4, "RT");
+        makeMask (centerX, centerY, 1, 3, "LL");
+        makeMask (centerX, centerY, 2, 1, "LR");
+        makeMask (centerX, centerY, 0, 0, "M");
+        makeMask (centerX, centerY, 5, 1, "RL");
+        makeMask (centerX, centerY, 4, 3, "RR");
+        makeMask (centerX, centerY, 2, 3, "LB");
+        makeMask (centerX, centerY, 3, 2, "B");
+        makeMask (centerX, centerY, 3, 4, "RB");
+    };
+};
+function makeCropMarksSet(centerX, centerY) { // vytvori vzorovu sadu orezovych znaciek
+    if (printingPlate.bottomPrinting == true) {
+        makeCropMarksMask (centerX, centerY, 5, 3, "LT");
+        makeCropMarksMask (centerX, centerY, 0, 2, "T");
+        makeCropMarksMask (centerX, centerY, 0, 4, "RT");
+        makeCropMarksMask (centerX, centerY, 4, 3, "LL");
+        makeCropMarksMask (centerX, centerY, 5, 1, "LR");
+        makeCropMarksMask (centerX, centerY, 0, 0, "M");
+        makeCropMarksMask (centerX, centerY, 2, 1, "RL");
+        makeCropMarksMask (centerX, centerY, 1, 3, "RR");
+        makeCropMarksMask (centerX, centerY, 3, 3, "LB");
+        makeCropMarksMask (centerX, centerY, 3, 2, "B");
+        makeCropMarksMask (centerX, centerY, 1, 4, "RB");
+    } else {
+        makeCropMarksMask (centerX, centerY, 0, 3, "LT");
+        makeCropMarksMask (centerX, centerY, 0, 2, "T");
+        makeCropMarksMask (centerX, centerY, 4, 4, "RT");
+        makeCropMarksMask (centerX, centerY, 1, 3, "LL");
+        makeCropMarksMask (centerX, centerY, 2, 1, "LR");
+        makeCropMarksMask (centerX, centerY, 0, 0, "M");
+        makeCropMarksMask (centerX, centerY, 5, 1, "RL");
+        makeCropMarksMask (centerX, centerY, 4, 3, "RR");
+        makeCropMarksMask (centerX, centerY, 2, 3, "LB");
+        makeCropMarksMask (centerX, centerY, 3, 2, "B");
+        makeCropMarksMask (centerX, centerY, 3, 4, "RB");
+    };
+};
+function removeMaskedSet () { // vyhodi vzorovu sadu koruniek
+    getPageItem ("LT").remove();
+    getPageItem ("T").remove();
+    getPageItem ("RT").remove();
+    getPageItem ("LL").remove();
+    getPageItem ("LR").remove();
+    getPageItem ("M").remove();
+    getPageItem ("RL").remove();
+    getPageItem ("RR").remove();
+    getPageItem ("LB").remove();
+    getPageItem ("B").remove();
+    getPageItem ("RB").remove();
+};
+function drawDieCutMarks () { // nakresli pasovacie kolecka
+    myDocument.activeLayer = myDocument.layers.itemByName("Marks");
+    var myColor = myDocument.swatches[3];
+    var myObjectStyle = myDocument.objectStyles.add({name: "DieCutMarks", strokeWeight: 0.25, strokeColor: myColor});
+    var marksList = [[1, 1], [13, 1], [14, 1], [27, 1], [1, 2], [13, 2], [14, 2], [27, 2], [14, 26], [27, 26], [1, 27], [13, 27], [14, 27], [15, 27], [26, 27], [27, 27]];
+    setProgWinContent ("Creating die cut marks...", 0, marksList.length);
+    for (var i = 0; i < marksList.length; i++) { 
+        addCircle (getOneUp (marksList[i][0], marksList[i][1]).centerX, getOneUp (marksList[i][0], marksList[i][1]).centerY, getOneUp (marksList[i][0], marksList[i][1]).cutDiameter, "cut"+i);
+        getPageItem ("cut"+i).applyObjectStyle(myObjectStyle);
+        pbar.value = i; progWin.update();
+    };
+};
+function drawPunchNumbers (angle, size, offset) { // nakresli cisla raznikov
+    myDocument.layers.add({name: "PunchNumbers"});
+    setProgWinContent ("Creating punch numbers...", 0, dieSet.length);
+    try{
+        myParagraphStyle = myDocument.paragraphStyles.item("PunchNumber"); 
+        myName = myParagraphStyle.name;
+    } catch (myError){
+        myParagraphStyle = myDocument.paragraphStyles.add({name:"PunchNumber"});
+    };
+        myParagraphStyle.justification = Justification.CENTER_ALIGN;
+        myParagraphStyle.appliedFont = app.fonts.itemByName("Arial	Regular");
+        myParagraphStyle.pointSize = size;
+        myParagraphStyle.baselineShift = offset;
+    var myTextFrame = myDocument.pages[0].textFrames.add({
+        name: "num", 
+        geometricBounds:[0 ,  0, dieSet.masterOneUp.cutDiameter,  
+        dieSet.masterOneUp.cutDiameter], 
+        contents: "00", 
+        rotationAngle: angle +180
+        });
+    var centerX = (myTextFrame.geometricBounds[1] + myTextFrame.geometricBounds[3])/2;
+    var centerY = (myTextFrame.geometricBounds[0] + myTextFrame.geometricBounds[2])/2;
+        myTextFrame.label = "[" + centerX + ", " + centerY + "]";
+        myTextFrame.textFramePreferences.verticalJustification = VerticalJustification.BOTTOM_ALIGN;
+        myTextFrame.texts[0].applyParagraphStyle(myParagraphStyle, true);
+    for (var i = 0; i < dieSet.length; i++) { 
+        duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "num", "num"+dieSet.oneUp[i].id)
+        dieSet.oneUp[i].punchNumFrame = getPageItem ("num"+dieSet.oneUp[i].id);
+        dieSet.oneUp[i].punchNumFrame.contents = dieSet.oneUp[i].punchNumber.toString ();
+        pbar.value = i; progWin.update();
+    };
+    getPageItem ("num").remove();
+};
+function drawLogos (name, angle, offset) { // nakresli loga
+    myDocument.layers.add({name: "Logos"});
+    setProgWinContent ("Creating logos...", 0, dieSet.length);
+    addCircle (0, 0, dieSet.masterOneUp.cutDiameter, "logo");
+    app.libraries[0].assets.itemByName(name).placeAsset (myDocument);
+    app.select(getPageItem (name));
+    app.cut();
+    app.select(getPageItem ("logo"));
+    app.pasteInto();
+    app.select(NothingEnum.NOTHING);
+    var childBound = getPageItem ("logo").allPageItems[0].geometricBounds; // [y1, x1, y2, x2] topleft, bottomright
+    var deltaV = dieSet.masterOneUp.getCutRadius() - offset - ((childBound[2] - childBound[0])/2);
+    getPageItem ("logo").allPageItems[0].move(undefined, [0, -deltaV]);
+    getPageItem ("logo").rotationAngle = angle;
+    for (var i = 0; i < dieSet.length; i++) { 
+        duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "logo", "logo"+dieSet.oneUp[i].id)
+        dieSet.oneUp[i].logo = getPageItem ("logo"+dieSet.oneUp[i].id);
+        dieSet.oneUp[i].logo.strokeColor = app.activeDocument.swatches[0];
+        pbar.value = i; progWin.update();
+    };
+    getPageItem ("logo").remove();
+};
+function placeAsset (name, to, angle) { // vlozi polozku kniznice na poziciu [x, y]
+    app.libraries[0].assets.itemByName(name).placeAsset (myDocument);
+    var myItem = getPageItem (name);
+        myItem.name = myItem.name + " copy";
+    var box = myItem.geometricBounds;
+    var center = [(box[1] + box[3])/2, (box[0] + box[2])/2];
+    var delta = [to[0] - center[0], to[1] - center[1]];
+    myItem.move(undefined, delta);
+    myItem.rotationAngle = angle;
+};
+function drawBleed () { // nakresli pridavok vo vrstve
+    var myObjectStyle = myDocument.objectStyles.add({name: "Bleed", strokeWeight: 0});
+    myDocument.layers.add({name: "Bleed"});
+    makeBleedSet (0, 0);
+    setProgWinContent ("Creating bleed masks...", 0, dieSet.length);
+    for (var i = 0; i < dieSet.length; i++) { 
+        if (dieSet.oneUp[i].stepNumber == 1  &&  dieSet.oneUp[i].punchNumber == dieSet.topPunchNumber) { // 0, 3, LT
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "LT", "bleed"+dieSet.oneUp[i].id)
+        } else if (dieSet.oneUp[i].stepNumber > 1  &&  dieSet.oneUp[i].stepNumber < dieSet.punchStepCount && dieSet.oneUp[i].punchNumber == dieSet.topPunchNumber) { // 0, 2, T
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "T", "bleed"+dieSet.oneUp[i].id)
+        } else if (dieSet.oneUp[i].stepNumber == dieSet.punchStepCount && dieSet.oneUp[i].punchNumber == dieSet.topPunchNumber) { // 4, 4, RT
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "RT", "bleed"+dieSet.oneUp[i].id)
+        } else if (dieSet.oneUp[i].stepNumber == 1 && dieSet.oneUp[i].punchNumber < dieSet.topPunchNumber) { // 1, 3, LL
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "LL", "bleed"+dieSet.oneUp[i].id)
+        } else if (dieSet.oneUp[i].stepNumber == dieSet.punchStepCount && dieSet.oneUp[i].punchNumber < dieSet.topPunchNumber) { // 5, 1, RL
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "RL", "bleed"+dieSet.oneUp[i].id)
+        } else if (dieSet.oneUp[i].stepNumber == 1 && dieSet.oneUp[i].punchNumber > dieSet.topPunchNumber && dieSet.oneUp[i].punchNumber < dieSet.punchDieCount) { // 2, 1, LR
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "LR", "bleed"+dieSet.oneUp[i].id)
+        } else if (dieSet.oneUp[i].stepNumber == dieSet.punchStepCount && dieSet.oneUp[i].punchNumber > dieSet.topPunchNumber && dieSet.oneUp[i].punchNumber < dieSet.punchDieCount) { // 4, 3, RR
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "RR", "bleed"+dieSet.oneUp[i].id)
+        } else if (dieSet.oneUp[i].stepNumber == 1  &&  dieSet.oneUp[i].punchNumber == dieSet.punchDieCount) { // 2, 3, LB
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "LB", "bleed"+dieSet.oneUp[i].id)
+        } else if (dieSet.oneUp[i].stepNumber > 1  &&  dieSet.oneUp[i].stepNumber < dieSet.punchStepCount && dieSet.oneUp[i].punchNumber == dieSet.punchDieCount) { // 3, 2, B
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "B", "bleed"+dieSet.oneUp[i].id)
+        } else if (dieSet.oneUp[i].stepNumber == dieSet.punchStepCount && dieSet.oneUp[i].punchNumber == dieSet.punchDieCount) { // 3, 4, RB
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "RB", "bleed"+dieSet.oneUp[i].id)
+        } else { // 0, 0, "M"
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "M", "bleed"+dieSet.oneUp[i].id)
+        };
+        dieSet.oneUp[i].bleed = getPageItem ("bleed"+dieSet.oneUp[i].id); // odkaz na page item
+        dieSet.oneUp[i].bleed.applyObjectStyle(myObjectStyle); // aplikacia objektoveho stylu
+        dieSet.oneUp[i].getArtwork().rotationAngle = artworkRotationAngle; // natocenie grafiky
+        pbar.value = i; progWin.update();
+    };
+    removeMaskedSet ();
+};
+function drawCropMarks () { // nakresli orezove znacky
+    makeCropMarksSet (0, 0);
+    setProgWinContent ("Creating crop marks...", 0, dieSet.length);
+    for (var i = 0; i < dieSet.length; i++) { 
+        if (dieSet.oneUp[i].stepNumber == 1  &&  dieSet.oneUp[i].punchNumber == dieSet.topPunchNumber) { // 0, 3, LT
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "LT", "crop"+dieSet.oneUp[i].id)
+        } else if (dieSet.oneUp[i].stepNumber > 1  &&  dieSet.oneUp[i].stepNumber < dieSet.punchStepCount && dieSet.oneUp[i].punchNumber == dieSet.topPunchNumber) { // 0, 2, T
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "T", "crop"+dieSet.oneUp[i].id)
+        } else if (dieSet.oneUp[i].stepNumber == dieSet.punchStepCount && dieSet.oneUp[i].punchNumber == dieSet.topPunchNumber) { // 4, 4, RT
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "RT", "crop"+dieSet.oneUp[i].id)
+        } else if (dieSet.oneUp[i].stepNumber == 1 && dieSet.oneUp[i].punchNumber < dieSet.topPunchNumber) { // 1, 3, LL
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "LL", "crop"+dieSet.oneUp[i].id)
+        } else if (dieSet.oneUp[i].stepNumber == dieSet.punchStepCount && dieSet.oneUp[i].punchNumber < dieSet.topPunchNumber) { // 5, 1, RL
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "RL", "crop"+dieSet.oneUp[i].id)
+        } else if (dieSet.oneUp[i].stepNumber == 1 && dieSet.oneUp[i].punchNumber > dieSet.topPunchNumber && dieSet.oneUp[i].punchNumber < dieSet.punchDieCount) { // 2, 1, LR
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "LR", "crop"+dieSet.oneUp[i].id)
+        } else if (dieSet.oneUp[i].stepNumber == dieSet.punchStepCount && dieSet.oneUp[i].punchNumber > dieSet.topPunchNumber && dieSet.oneUp[i].punchNumber < dieSet.punchDieCount) { // 4, 3, RR
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "RR", "crop"+dieSet.oneUp[i].id)
+        } else if (dieSet.oneUp[i].stepNumber == 1  &&  dieSet.oneUp[i].punchNumber == dieSet.punchDieCount) { // 2, 3, LB
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "LB", "crop"+dieSet.oneUp[i].id)
+        } else if (dieSet.oneUp[i].stepNumber > 1  &&  dieSet.oneUp[i].stepNumber < dieSet.punchStepCount && dieSet.oneUp[i].punchNumber == dieSet.punchDieCount) { // 3, 2, B
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "B", "crop"+dieSet.oneUp[i].id)
+        } else if (dieSet.oneUp[i].stepNumber == dieSet.punchStepCount && dieSet.oneUp[i].punchNumber == dieSet.punchDieCount) { // 3, 4, RB
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "RB", "crop"+dieSet.oneUp[i].id)
+        } else { // 0, 0, "M"
+            duplicatePolygon (dieSet.oneUp[i].centerX, dieSet.oneUp[i].centerY, "M", "crop"+dieSet.oneUp[i].id)
+        };
+        dieSet.oneUp[i].cropMark = getPageItem ("crop"+dieSet.oneUp[i].id); // odkaz na page item
+        dieSet.oneUp[i].cropMark.strokeColor = app.activeDocument.swatches[0];
+        pbar.value = i; progWin.update();
+    };
+    removeMaskedSet ();
+};
+function getLibraryList() { // vrati zoznam poloziek kniznice
+    var nameList = [];
+    for (var i = 0; i < app.libraries[0].assets.length; i++) {
+        nameList[i] = app.libraries[0].assets[i].name;
+    };
+    return nameList;
+};
+function getLibraryIndex(name) { // vrati index polozky kniznice podla mena
+    var list = getLibraryList ();
+    var index = -1;
+    for (var i = 0; i < list.length; i++) {
+        if (list[i] == name) {index = i};
+    };
+    return index;
+};
+function drawSheetCornerMarks (length, stroke) {
+    try{
+        myObjectStyle = myDocument.objectStyles.itemByName("SheetCornerMarks"); 
+        myName = myObjectStyle.name;
+    } catch (myError){
+        myObjectStyle = myDocument.objectStyles.add({name: "SheetCornerMarks", strokeWeight: stroke, strokeColor: myDocument.swatches[1]});
+    };
+    try{
+        myLayer = myDocument.layers.itemByName("Marks"); 
+        myName = myLayer.name;
+    } catch (myError){
+        myLayer = myDocument.layers.add({name: "Marks"});
+    };
+    myDocument.activeLayer = myLayer;
+    var cornerLT = [ printingPlate.getSheetLeft (), printingPlate.getSheetTop ()]; // [x, y] roh harku
+    var cornerRT = [ printingPlate.getSheetLeft () + printingPlate.sheetWidth, printingPlate.getSheetTop ()]; // [x, y] roh harku
+    var cornerLB = [ printingPlate.getSheetLeft (), printingPlate.height - printingPlate.getSheetBottom ()]; // [x, y] roh harku
+    var cornerRB = [ printingPlate.getSheetLeft () + printingPlate.sheetWidth, printingPlate.height - printingPlate.getSheetBottom ()]; // [x, y] roh harku
+    var offset = stroke*0.33/2;
+    addLine (cornerLT[0], cornerLT[1]+offset, 0, length, 0, "lth");
+    addLine (cornerLT[0]+offset, cornerLT[1], 0, length, -90, "ltv");
+    addLine (cornerRT[0], cornerRT[1]+offset, 0, length, 180 , "rth");
+    addLine (cornerRT[0]-offset, cornerRT[1], 0, length, -90, "rtv");
+    addLine (cornerLB[0], cornerLB[1]-offset, 0, length, 0, "lbh");
+    addLine (cornerLB[0]+offset, cornerLB[1], 0, length, 90, "lbv");
+    addLine (cornerRB[0], cornerRB[1]-offset, 0, length, 180 , "rbh");
+    addLine (cornerRB[0]-offset, cornerRB[1], 0, length, 90, "rbv");
+    makeGroup (["lth", "ltv", "rth", "rtv", "lbh", "lbv", "rbh", "rbv"], "SheetCornerMarks", [printingPlate.width/2, printingPlate.height/2]);
+    printingPlate.sheetCorners = getPageItem ("SheetCornerMarks");
+    printingPlate.sheetCorners.applyObjectStyle(myObjectStyle);
+    myDocument.rectangles.add({ 
+        name: "sheetMask",
+        geometricBounds: [cornerLT[1], cornerLT[0] - 10, cornerLB[1], cornerLB[0]],
+        strokeWeight: 0,
+        strokeColor: app.activeDocument.swatches[0],
+        fillColor: myDocument.swatches[2]
+    });
+    getPageItem ("sheetMask").duplicate(undefined, [printingPlate.sheetWidth + 10, 0]);
+};
+function drawLibraryMarks () { //vlozi znacky z kniznice
+    try{
+        myLayer = myDocument.layers.itemByName("Marks"); 
+        myName = myLayer.name;
+    } catch (myError){
+        myLayer = myDocument.layers.add({name: "Marks"});
+    };
+    myDocument.activeLayer = myLayer;
+    if (dh.bottomPrint == true) {
+        placeAsset ("CP greif mark", [getOneUp(13, 2).centerX, getOneUp(27, 2).getBottom() - 3], 0);
+        placeAsset ("CP greif mark", [getOneUp(13, 27).centerX, getOneUp(27, 27).getBottom() - 3], 0);
+        placeAsset ("CP passer marks", [(getOneUp(1, 1).centerX  + (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(14, 1).centerY], 0);
+        placeAsset ("CP passer marks", [(getOneUp(1, 1).centerX  + (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(21, 1).centerY], 0);
+        placeAsset ("CP passer marks", [(getOneUp(1, 1).centerX  + (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(27, 1).centerY], 0);
+        placeAsset ("CP passer marks", [getOneUp(13, 14).centerX, getOneUp(27, 14).getBottom() - 3], 0);
+        placeAsset ("CP passer marks", [(getOneUp(14, 27).centerX  - (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(1, 27).centerY], 0);
+        placeAsset ("CP passer marks", [(getOneUp(14, 27).centerX  - (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(6, 27).centerY], 0);
+        placeAsset ("CP passer marks", [(getOneUp(14, 27).centerX  - (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(13, 27).centerY], 0);
+        placeAsset ("CP info", [(getOneUp(1, 1).centerX  + (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(17, 1).centerY], -90);
+        placeAsset ("CP info", [(getOneUp(1, 1).centerX  + (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(24, 1).centerY], -90);
+        placeAsset ("CP info", [(getOneUp(14, 27).centerX  - (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(4, 27).centerY], 90);
+        placeAsset ("CP info", [(getOneUp(14, 27).centerX  - (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(11, 27).centerY], 90);
+    } else {
+        placeAsset ("CP greif mark", [getOneUp(13, 2).centerX, getOneUp(27, 2).getBottom() - 3], 0);
+        placeAsset ("CP greif mark", [getOneUp(13, 27).centerX, getOneUp(27, 27).getBottom() - 3], 0);
+        placeAsset ("CP passer marks", [(getOneUp(1, 1).centerX  - (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(14, 1).centerY], 0);
+        placeAsset ("CP passer marks", [(getOneUp(1, 1).centerX  - (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(21, 1).centerY], 0);
+        placeAsset ("CP passer marks", [(getOneUp(1, 1).centerX  - (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(27, 1).centerY], 0);
+        placeAsset ("CP passer marks", [getOneUp(13, 14).centerX, getOneUp(27, 14).getBottom() - 3], 0);
+        placeAsset ("CP passer marks", [(getOneUp(14, 27).centerX  + (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(1, 27).centerY], 0);
+        placeAsset ("CP passer marks", [(getOneUp(14, 27).centerX  + (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(6, 27).centerY], 0);
+        placeAsset ("CP passer marks", [(getOneUp(14, 27).centerX  + (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(13, 27).centerY], 0);
+        placeAsset ("CP info", [(getOneUp(1, 1).centerX  - (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(17, 1).centerY], 90);
+        placeAsset ("CP info", [(getOneUp(1, 1).centerX  - (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(24, 1).centerY], 90);
+        placeAsset ("CP info", [(getOneUp(14, 27).centerX  + (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(4, 27).centerY], -90);
+        placeAsset ("CP info", [(getOneUp(14, 27).centerX  + (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(11, 27).centerY], -90);
+    };
+    
+};
+function newDialog () { // dialóg novy dokument
+    var w = new Window ("dialog", "Mounting data");
+        w.alignChildren = "left";
+        var tpanel = w.add ("tabbedpanel");
+            tpanel.alignChildren = ["fill", "fill"];
+            tpanel.margins = 10;
+        var formatTab = tpanel.add ("tab", undefined, "Format");
+            formatTab.orientation = "row";
+        var panelGroup = formatTab.add("group");
+        panelGroup.orientation = "column";
+        panelGroup.spacing = 22;
+        panelGroup.alignChildren = "fill";
+        var p1 = panelGroup.add('panel {text: "Printing plate [mm]", borderstyle: "gray", alignChildren: "fill"}');
+            p1.g1 = p1.add("group");
+                p1.g1.add('statictext {text: "Name: ", characters: 6}');
+                var plateName = p1.g1.add('edittext {characters: 19, active: true}');
+                    plateName.text = dh.plateName;
+                    plateName.onChange = function () {
+                        dh.plateName = plateName.text;
+                    };
+                p1.g1.add('statictext {text: "Bottom: "}');
+                var bottomPrint = p1.g1.add("checkbox");
+                    bottomPrint.value = dh.bottomPrint;
+                    bottomPrint.onClick = function () {
+                        dh.bottomPrint = bottomPrint.value;
+                    };
+            p1.g2 = p1.add("group");
+                p1.g2.add('statictext {text: "Width: ", characters: 6}');
+                var plateWidth = p1.g2.add('edittext {characters: 10, justify: "right"}');
+                    plateWidth.text = dh.plateWidth;
+                    plateWidth.onChange = function () {
+                        dh.plateWidth = Number(plateWidth.text);
+                    };
+                    plateWidth.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (plateWidth.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                p1.g2.add('statictext {text: "Hight: ", characters: 6}');
+                var plateHight = p1.g2.add('edittext {characters: 10, justify: "right"}');
+                    plateHight.text = dh.plateHight;
+                    plateHight.onChange = function () {
+                        dh.plateHight = Number(plateHight.text);
+                    };
+                    plateHight.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (plateHight.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+            p1.g3 = p1.add("group");    
+                p1.g3.add('statictext {text: "Printing start: ", characters: 11}');
+                var printStart = p1.g3.add('edittext {characters: 10, justify: "right"}');
+                    printStart.text = dh.printStart;
+                    printStart.onChange = function () {
+                        dh.printStart = Number(printStart.text);
+                    };
+                    printStart.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (printStart.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                p1.g3.add('statictext {text: "(line setting ±1mm)"}');
+        var p2 = panelGroup.add('panel {text: "Steel sheet [mm]", borderstyle: "gray", alignChildren: "fill"}');
+            p2.g1 = p2.add("group");
+                p2.g1.add('statictext {text: "Width: ", characters: 6}');
+                var sheetWidth = p2.g1.add('edittext {characters: 10, justify: "right"}');
+                    sheetWidth.text = dh.sheetWidth;
+                    sheetWidth.onChange = function () {
+                        dh.sheetWidth = Number(sheetWidth.text);
+                    };
+                    sheetWidth.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (sheetWidth.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                p2.g1.add('statictext {text: "Hight: ", characters: 6}');
+                var sheetHight = p2.g1.add('edittext {characters: 10, justify: "right"}');
+                    sheetHight.text = dh.sheetHight;
+                    sheetHight.onChange = function () {
+                        dh.sheetHight = Number(sheetHight.text);
+                    };
+                    sheetHight.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (sheetHight.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+            p2.g2 = p2.add("group");    
+                p2.g2.add('statictext {text: "Gripper width: ", characters: 12}');
+                var gripperWidth = p2.g2.add('edittext {characters: 10, justify: "right"}');
+                    gripperWidth.text = dh.gripperWidth;
+                    gripperWidth.onChange = function () {
+                        dh.gripperWidth = Number(gripperWidth.text);
+                    };
+                    gripperWidth.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (gripperWidth.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                p2.g2.add('statictext {text: "(unprintable area)"}');
+            p2.add("panel"); // separator
+            p2.g3 = p2.add("group");
+                p2.g3.add('statictext {text: "Corner Marks length [mm]: ", justify: "left"}');
+                var sheetCornerLength = p2.g3.add('edittext {characters: 4, justify: "center"}');
+                    sheetCornerLength.text = dh.sheetCornerLength;
+                    sheetCornerLength.onChange = function () {
+                        dh.sheetCornerLength = Number(sheetCornerLength.text);
+                    };
+                    sheetCornerLength.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (sheetCornerLength.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                p2.g3.add('statictext {text: "thickness [pt]: "}');
+                var sheetCornerThickness = p2.g3.add('edittext {characters: 4, justify: "center"}');
+                    sheetCornerThickness.text = dh.sheetCornerThickness;
+                    sheetCornerThickness.onChange = function () {
+                        dh.sheetCornerThickness = Number(sheetCornerThickness.text);
+                    };
+                    sheetCornerThickness.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (sheetCornerThickness.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+        formatTab.add("image", undefined, File (imagesFolder + "formaty.png"));
+        
+        var vysekTab = tpanel.add ("tab", undefined, "Die-set");
+            vysekTab.orientation = "row";
+        var p3 = vysekTab.add('panel {text: "Parameters [mm] ", borderstyle: "gray", alignChildren: "fill", alignment: "fill"}');
+            p3.g1 = p3.add("group");
+                p3.g1.add('statictext {text: "Cut diameter: ", characters: 26, justify: "right"}');
+                var cutDiameter = p3.g1.add('edittext {characters: 10, justify: "right"}');
+                    cutDiameter.text = dh.cutDiameter;
+                    cutDiameter.onChange = function () {
+                        dh.cutDiameter = Number(cutDiameter.text);
+                    };
+                    cutDiameter.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (cutDiameter.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+            p3.g2 = p3.add("group");    
+                p3.g2.add('statictext {text: "Bleed diameter: ", characters: 26, justify: "right"}');
+                var bleedDiameter = p3.g2.add('edittext {characters: 10, justify: "right"}');
+                    bleedDiameter.text = dh.bleedDiameter;
+                    bleedDiameter.onChange = function () {
+                        dh.bleedDiameter = Number(bleedDiameter.text);
+                    };
+                    bleedDiameter.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (bleedDiameter.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+            p3.g3 = p3.add("group");    
+                p3.g3.add('statictext {text: "Punch die count: ", characters: 26, justify: "right"}');
+                var punchDieCount = p3.g3.add('edittext {characters: 10, justify: "right"}');
+                    punchDieCount.text = dh.punchDieCount;
+                    punchDieCount.onChange = function () {
+                        dh.punchDieCount = Number(punchDieCount.text);
+                    };
+                    punchDieCount.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (punchDieCount.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+            p3.g4 = p3.add("group");    
+                p3.g4.add('statictext {text: "Die horizontal offset: ", characters: 26, justify: "right"}');
+                var dieHorizontalOffset = p3.g4.add('edittext {characters: 10, justify: "right"}');
+                    dieHorizontalOffset.text = dh.dieHorizontalOffset;
+                    dieHorizontalOffset.onChange = function () {
+                        dh.dieHorizontalOffset = Number(dieHorizontalOffset.text);
+                    };
+                    dieHorizontalOffset.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (dieHorizontalOffset.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+            p3.g5 = p3.add("group");    
+                p3.g5.add('statictext {text: "Die vertical offset: ", characters: 26, justify: "right"}');
+                var dieVerticalOffset = p3.g5.add('edittext {characters: 10, justify: "right"}');
+                    dieVerticalOffset.text = dh.dieVerticalOffset;
+                    dieVerticalOffset.onChange = function () {
+                        dh.dieVerticalOffset = Number(dieVerticalOffset.text);
+                    };
+                    dieVerticalOffset.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (dieVerticalOffset.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+             p3.g6 = p3.add("group");    
+                p3.g6.add('statictext {text: "Top die number: ", characters: 26, justify: "right"}');
+                var topDieNumber = p3.g6.add('edittext {characters: 10, justify: "right"}');
+                    topDieNumber.text = dh.topDieNumber;
+                    topDieNumber.onChange = function () {
+                        dh.topDieNumber = Number(topDieNumber.text);
+                    };
+                    topDieNumber.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (topDieNumber.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+             p3.g7 = p3.add("group");    
+                p3.g7.add('statictext {text: "Punch step width: ", characters: 26, justify: "right"}');
+                var punchStepWidth = p3.g7.add('edittext {characters: 10, justify: "right"}');
+                    punchStepWidth.text = dh.punchStepWidth;
+                    punchStepWidth.onChange = function () {
+                        dh.punchStepWidth = Number(punchStepWidth.text);
+                    };
+                    punchStepWidth.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (punchStepWidth.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+             p3.g8 = p3.add("group");    
+                p3.g8.add('statictext {text: "Punch step count: ", characters: 26, justify: "right"}');
+                var punchStepCount = p3.g8.add('edittext {characters: 10, justify: "right"}');
+                    punchStepCount.text = dh.punchStepCount;
+                    punchStepCount.onChange = function () {
+                        dh.punchStepCount = Number(punchStepCount.text);
+                    };
+                    punchStepCount.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (punchStepCount.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+             p3.add("panel"); // separator
+        vysekTab.add("image", undefined, File (imagesFolder + "vysek.png"));
+            
+        var artworkTab = tpanel.add ("tab", undefined, "One-Up");
+            artworkTab.orientation = "row";
+        var p4 = artworkTab.add('panel {text: "Preferencies: ", borderstyle: "gray", alignChildren: "fill", alignment: "fill"}');
+            p4.g1 = p4.add("group");
+                p4.g1.add('statictext {text: "Artwork: ", justify: "left"}');
+                var artworkName = p4.g1.add("edittext", undefined,  dh.artworkFile.displayName, {readonly: true, justify: "left"});
+                    artworkName.characters = 16;
+                var loadArtworkBtn = p4.g1.add ("button", undefined, "Select");
+                    loadArtworkBtn.onClick = function () {
+                        var loadFile = dh.artworkFile.openDlg ("Load artwork file", "PDF: *.pdf, All files: *.*");
+                        if (loadFile != null) {
+                            dh.artworkFile = loadFile;
+                            artworkName.text = dh.artworkFile.displayName;
+                        }; 
+                    };
+            p4.g2 = p4.add("group");
+                p4.g2.add('statictext {text: "Artwork angle [°]: ", justify: "left"}');
+                p4.g2.g0 = p4.g2.add("group {alignChildren: 'left', orientation: 'stack'}");
+                var artworkAngle = p4.g2.g0.add("edittext", [0, 0, 72, 20]);
+                    artworkAngle.text = dh.artworkAngle;
+                    artworkAngle.onChange = function () {
+                        dh.artworkAngle = Number(artworkAngle.text);
+                    };
+                    artworkAngle.onChanging = function () {
+                        var valid = /^[\d.-]+$/.test (artworkAngle.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                var artworkAngles = p4.g2.g0.add("dropdownlist", [0, 0, 90, 20], ["0", "45", "90", "135", "180", "-45", "-90"]);
+                    artworkAngles.minimumSize.width = 70;
+                    artworkAngles.onChange = function () {
+                        artworkAngle.text = artworkAngles.selection.text;
+                        dh.artworkAngle = Number(artworkAngle.text);
+                        artworkAngle.active = true;
+                    };
+            p4.add("panel"); // separator
+            p4.g3 = p4.add("group");
+                p4.g3.add('statictext {text: "Crop Marks length [mm]: ", justify: "left"}');
+                var cropMarkLength = p4.g3.add('edittext {characters: 4, justify: "center"}');
+                    cropMarkLength.text = dh.cropMarkLength;
+                    cropMarkLength.onChange = function () {
+                        dh.cropMarkLength = Number(cropMarkLength.text);
+                    };
+                    cropMarkLength.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (cropMarkLength.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                p4.g3.add('statictext {text: "thickness [pt]: "}');
+                var cropMarkThickness = p4.g3.add('edittext {characters: 4, justify: "center"}');
+                    cropMarkThickness.text = dh.cropMarkThickness;
+                    cropMarkThickness.onChange = function () {
+                        dh.cropMarkThickness = Number(cropMarkThickness.text);
+                    };
+                    cropMarkThickness.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (cropMarkThickness.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+            p4.add("panel"); // separator
+            p4.g4 = p4.add("group");
+                p4.g4.add('statictext {text: "Punch Number angle  [°]: ", justify: "left"}');
+                p4.g4.g0 = p4.g4.add("group {alignChildren: 'left', orientation: 'stack'}");
+                var punchNumAngle = p4.g4.g0.add("edittext", [0, 0, 72, 20]);
+                    punchNumAngle.text = dh.punchNumAngle;
+                    punchNumAngle.onChange = function () {
+                        dh.punchNumAngle = Number(punchNumAngle.text);
+                    };
+                    punchNumAngle.onChanging = function () {
+                        var valid = /^[\d.-]+$/.test (punchNumAngle.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                var punchNumAngles = p4.g4.g0.add("dropdownlist", [0, 0, 90, 20], ["0", "45", "90", "135", "180", "-45", "-90"]);
+                    punchNumAngles.minimumSize.width = 70;
+                    punchNumAngles.onChange = function () {
+                        punchNumAngle.text = punchNumAngles.selection.text;
+                        dh.punchNumAngle = Number(punchNumAngle.text);
+                        punchNumAngle.active = true;
+                    };
+            p4.g5 = p4.add("group");
+                p4.g5.add('statictext {text: "Punch Number size [pt]: ", justify: "left"}');
+                var punchNumSize = p4.g5.add('edittext {characters: 4, justify: "center"}');
+                    punchNumSize.text = dh.punchNumSize;
+                    punchNumSize.onChange = function () {
+                        dh.punchNumSize = Number(punchNumSize.text);
+                    };
+                    punchNumSize.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (punchNumSize.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                p4.g5.add('statictext {text: "offset [pt]:"}');
+                var punchNumOffset = p4.g5.add('edittext {characters: 4, justify: "center"}');
+                    punchNumOffset.text = dh.punchNumOffset;
+                    punchNumOffset.onChange = function () {
+                        dh.punchNumOffset = Number(punchNumOffset.text);
+                    };
+                    punchNumOffset.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (punchNumOffset.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+            p4.add("panel"); // separator
+            p4.g6 = p4.add("group");
+                p4.g6.add('statictext {text: "Logo: ", justify: "left"}');
+                var logosDropList = p4.g6.add("dropdownlist", undefined, getLibraryList ());
+                    logosDropList.minimumSize.width = 70;
+                    logosDropList.selection = getLibraryIndex (dh.logoName);
+                    logosDropList.onChange = function () {
+                        dh.logoName = logosDropList.selection.text;
+                    };
+                p4.g6.add('statictext {text: "(library item)", justify: "left"}');
+            p4.g7 = p4.add("group");
+                p4.g7.add('statictext {text: "Logo angle [°]: ", justify: "left"}');
+                p4.g7.g0 = p4.g7.add("group {alignChildren: 'left', orientation: 'stack'}");
+                var logoAngle = p4.g7.g0.add("edittext", [0, 0, 72, 20]);
+                    logoAngle.text = dh.logoAngle;
+                    logoAngle.onChange = function () {
+                        dh.logoAngle = Number(logoAngle.text);
+                    };
+                    logoAngle.onChanging = function () {
+                        var valid = /^[\d.-]+$/.test (logoAngle.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                var logoAngles = p4.g7.g0.add("dropdownlist", [0, 0, 90, 20], ["TSP", "CPY", "CPB", "TIK", "KMK", "TFR"]);
+                    logoAngles.minimumSize.width = 70;
+                    logoAngles.onChange = function () {
+                        switch(logoAngles.selection.text) {
+                            case "TSP":
+                                logoAngle.text = "20";
+                                break;
+                            case "CPY":
+                                logoAngle.text = "75";
+                                break;
+                            case "CPB":
+                                logoAngle.text = "135";
+                                break;
+                            case "TIK":
+                                logoAngle.text = "-45";
+                                break;
+                            case "KMK":
+                                logoAngle.text = "-105";
+                                break;
+                            case "TFR":
+                                logoAngle.text = "-165";
+                                break;
+                            };
+                        dh.logoAngle = Number(logoAngle.text);
+                        logoAngle.active = true;
+                    };   
+                p4.g7.add('statictext {text: "(from punch number)", justify: "left"}');
+            p4.g8 = p4.add("group");
+                p4.g8.add('statictext {text: "Logo offset [mm]:"}');
+                var logoOffset = p4.g8.add('edittext {characters: 4, justify: "center"}');
+                    logoOffset.text = dh.logoOffset;
+                    logoOffset.onChange = function () {
+                        dh.logoOffset = Number(logoOffset.text);
+                    };
+                    logoOffset.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (logoOffset.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+        artworkTab.add("image", undefined, File (imagesFolder + "grafika.png"));
+        
+        var settingsButtonGroup = w.add ('group {alignment: "left"}');
+             var loadSettingsBtn = settingsButtonGroup.add ("button", undefined, "Load settings");
+                loadSettingsBtn.onClick = function () {
+                    var myFolder = new Folder(imagesFolder);
+                    var loadFile = myFolder.openDlg ("Open settings file", "Settings: *.txt, All files: *.*");
+                    if (loadFile != null) {
+                        loadFile.open("r");
+                        dh = eval(loadFile.read());
+                            plateName.text = dh.plateName;
+                            bottomPrint.value = dh.bottomPrint;
+                            plateWidth.text = dh.plateWidth;
+                            plateHight.text = dh.plateHight;
+                            printStart.text = dh.printStart;
+                            sheetWidth.text = dh.sheetWidth;
+                            sheetHight.text = dh.sheetHight;
+                            gripperWidth.text = dh.gripperWidth;
+                            cutDiameter.text = dh.cutDiameter;
+                            bleedDiameter.text = dh.bleedDiameter;
+                            punchDieCount.text = dh.punchDieCount;
+                            dieHorizontalOffset.text = dh.dieHorizontalOffset;
+                            dieVerticalOffset.text = dh.dieVerticalOffset;
+                            topDieNumber.text = dh.topDieNumber;
+                            punchStepWidth.text = dh.punchStepWidth;
+                            punchStepCount.text = dh.punchStepCount;
+                            artworkName.text = dh.artworkFile.displayName;
+                            artworkAngle.text = dh.artworkAngle;
+                            cropMarkLength.text = dh.cropMarkLength;
+                            cropMarkThickness.text = dh.cropMarkThickness;
+                            punchNumAngle.text = dh.punchNumAngle;
+                            punchNumSize.text = dh.punchNumSize;
+                            punchNumOffset.text = dh.punchNumOffset;
+                            logosDropList.selection = getLibraryIndex (dh.logoName);
+                            logoAngle.text = dh.logoAngle;
+                            logoOffset.text = dh.logoOffset;
+                            sheetCornerLength.text = dh.sheetCornerLength;
+                            sheetCornerThickness.text = dh.sheetCornerThickness;
+                        loadFile.close();
+                    };
+                };
+             var saveSettingsBtn = settingsButtonGroup.add ("button", undefined, "Save settings");
+                saveSettingsBtn.onClick = function () {
+                    var myFolder = new Folder (imagesFolder + dh.plateName + " settings" + ".txt");
+                    var saveFile = myFolder.saveDlg("Save settings file", "Settings: *.txt, All files: *.*");
+                    if (saveFile != null) {
+                        saveFile.open ("w");
+                        saveFile.write(dh.toSource());
+                        saveFile.close();
+                    };
+                };
+        
+        var buttonGroup = w.add ('group {alignment: "right"}');
+            buttonGroup.add ("button", undefined, "OK");
+            buttonGroup.add ("button", undefined, "Cancel");
+    
+    if (w.show () == 1) {
+        progWin.text = "Creating new template..."; progWin.show(); progWin.update();
+        printingPlate.name = dh.plateName;
+        printingPlate.width = dh.plateWidth;
+        printingPlate.height = dh.plateHight;
+        printingPlate.sheetWidth = dh.sheetWidth;
+        printingPlate.sheetHeight = dh.sheetHight;
+        printingPlate.printingStart = dh.printStart;
+        printingPlate.gripperEdge = dh.gripperWidth;
+        printingPlate.bottomPrinting = dh.bottomPrint;
+        printingPlate.sheetCornerLength = dh.sheetCornerLength;
+        printingPlate.sheetCornerThickness = dh.sheetCornerThickness;
+        dieSet.masterOneUp.cutDiameter = dh.cutDiameter;
+        dieSet.masterOneUp.bleedDiameter = dh.bleedDiameter;
+        dieSet.punchDieCount = dh.punchDieCount;
+        dieSet.punchHorizontalOffset = dh.dieHorizontalOffset;
+        dieSet.punchVerticalOffset = dh.dieVerticalOffset;
+        dieSet.topPunchNumber = dh.topDieNumber;
+        dieSet.punchStepCount = dh.punchStepCount;
+        dieSet.punchStepWidth = dh.punchStepWidth;
+        artworkFile = dh.artworkFile;
+        artworkRotationAngle = dh.artworkAngle;
+        myDocument = app.documents.add(); // novy dokument
+        app.activeWindow.transformReferencePoint = AnchorPoint.CENTER_ANCHOR; // nastavi referencny bod na stred
+        makePlate ();
+        dieSet = new DieSet();
+        dieSet.fillDieSet();
+        drawBkgr ();
+        drawBleed ();
+        drawCropMarks ();
+        drawPunchNumbers (dh.punchNumAngle, dh.punchNumSize, dh.punchNumOffset);
+        drawLogos (dh.logoName, dh.logoAngle + dh.punchNumAngle, dh.logoOffset);
+        drawSheetCornerMarks (printingPlate.sheetCornerLength, printingPlate.sheetCornerThickness);
+        drawDieCutMarks ();
+        drawLibraryMarks ();
+        drawScales ();
+        myDocument.insertLabel("printingPlate", printingPlate.toSource()); // vlozi objekt platna do dokumentu
+        myDocument.insertLabel("dieSet", dieSet.toSource()); // vlozi objekt vysek do dokumentu
+        myDocument.insertLabel("dh", dh.toSource()); // vlozi objekt data z dialogu do dokumentu
+        progWin.hide();
+        alert("Mounting document was created successfully...");
+    };
+};
+function afterLoadDocument () { // nacita premenne z dokumentu
+    try {
+        myDocument = app.activeDocument;
+    } catch (myError) {
+        alert("You have not opened any document...");
+        return;
+    };
+    dh = eval(myDocument.extractLabel("dh")); // precita a vytvori premennu z dokumentu
+    dieSet = new DieSet();
+    dieSet.masterOneUp.cutDiameter = dh.cutDiameter;
+    dieSet.masterOneUp.bleedDiameter = dh.bleedDiameter;
+    dieSet.punchDieCount = dh.punchDieCount;
+    dieSet.punchHorizontalOffset = dh.dieHorizontalOffset;
+    dieSet.punchVerticalOffset = dh.dieVerticalOffset;
+    dieSet.topPunchNumber = dh.topDieNumber;
+    dieSet.punchStepCount = dh.punchStepCount;
+    dieSet.punchStepWidth = dh.punchStepWidth;
+    dieSet.fillDieSet();
+};
+function drawScales () { // nakresli skaly
+    var myLayer = myDocument.layers.add({name: "Scales"});
+    for (var i = 1; i < dh.punchStepCount; i++) {
+        addCircle (getOneUp(1, i + 1).centerX, (getOneUp(14, 1).getTop() + 3.75), 8, "scale"+i);
+        getPageItem ("scale"+i).fillColor = myDocument.swatches[3];
+    };
+};
+function relinkArtwork (artworkFile) { // prelinkuje artwork
+    /*myDocument.links[i].parent.parent.pdfs[0].pdfAttributes.pdfCrop = 1131573325; // nastavenie orezu PDF na CROP_MEDIA - read only!
+        myDocument.links[i].parent.parent.pdfs[0].pdfAttributes.transparentBackground = false; // vypne transparentne pozadie v PDF - read only!*/
+    var changingAlert = false;
+    setProgWinContent ("Relinking artworks...", 0, dieSet.length);
+    if (myDocument.links[0].parent.parent.pdfs[0].pdfAttributes.pdfCrop != 1131573325) {
+        for (var i = 0; i < dieSet.length; i++) {
+            myDocument.links[i].relink(artworkFile);
+            if (Math.round(myDocument.links[i].parent.absoluteHorizontalScale) != 100) {
+                myDocument.links[i].parent.absoluteHorizontalScale = 100;
+                myDocument.links[i].parent.absoluteVerticalScale = 100;
+                myDocument.links[i].parent.parent.fillColor = app.activeDocument.swatches[2];
+                changingAlert = true;
+            };
+            pbar.value = i; progWin.update();
+        };
+        if (changingAlert == true) {
+            alert("PDF scale was changed to 100%. \n Container fill was changed to PAPER. \n Check One-up or use new template!", "Warning!", true);
+        } else {
+            alert("Old template used! \n PDF dont have crop to MEDIA \n PDF has transparent background", "Warning!", true);
+        };
+    } else {
+        for (var i = 0; i < dieSet.length; i++) {
+            myDocument.links[i].relink(artworkFile);
+            pbar.value = i; progWin.update();
+        };
+    };
+};
+function rotateArtwork (angle) { // otoci nalinkovany artwork
+    setProgWinContent ("Rotating artworks...", 0, dieSet.length);
+    for (var i = 1; i <= dieSet.length; i++) {
+        getPageItem ("bleed" + i).allGraphics[0].rotationAngle = angle;
+        pbar.value = i; progWin.update();
+    };
+};
+function rotatePunchNumbers (angle) { // otoci cisla raznikov
+    setProgWinContent ("Rotating punch numbers...", 0, dieSet.length);
+    for (var i = 1; i <= dieSet.length; i++) {
+        getPageItem ("num" + i).rotationAngle = angle + 180;
+        pbar.value = i; progWin.update();
+    };
+};
+function rotateLogos (angle) { // otoci loga
+    setProgWinContent ("Rotating logos...", 0, dieSet.length);
+    for (var i = 1; i <= dieSet.length; i++) {
+        getPageItem ("logo" + i).rotationAngle = angle;
+        pbar.value = i; progWin.update();
+    };
+};
+function prepressSetup () { // nastavenie celeho pre-pressu
+    try {
+        myDocument = app.activeDocument;
+    } catch (myError) {
+        alert("You have not opened any document...");
+        return;
+    };
+    mySwatch = myDocument.swatches;
+    myColor = myDocument.colors;
+    myObjectStyle = myDocument.objectStyles;
+    myParagraphStyle = myDocument.paragraphStyles;
+    myCharacterStyle = myDocument.characterStyles;
+    myTextVariable = myDocument.textVariables;
+    myLinkXmp = myDocument.links[0].linkXmp;
+    myXmpInksCount = myLinkXmp.countContainer("http://ns.esko-graphics.com/grinfo/1.0/","inks");
+    myMixedInk = myDocument.mixedInks;
+    myInk = myDocument.inks;
+    myTint = myDocument.tints;
+    scaleStrip = new ScaleStrip();
+    
+    /*if (loadXMPLibrary()) { // read xml packet
+        myLinkedFile = File(app.activeDocument.links[0].filePath);
+        xmpLinkedFile = new XMPFile(myLinkedFile.fsName, XMPConst.UNKNOWN, XMPConst.OPEN_FOR_READ);
+        myLinkedXmp = xmpLinkedFile.getXMP();
+        xmpLinkedFile.closeFile(XMPConst.CLOSE_UPDATE_SAFELY);
+        unloadXMPLibrary();
+    };*/
+    readXMPdata(app.activeDocument.links[0].filePath);
+    
+    progWin.text = "Prepress Setup...";
+    progWin.show();
+    setProgWinContent ("Clean Up", 0, 1); pbar.value = 1; progWin.update();
+        removeUnusedSwatch();
+    setProgWinContent ("Esko Inks", 0, 1);  pbar.value = 1; progWin.update();
+        setEgInks();
+    setProgWinContent ("Artwork Variables", 0, 2); pbar.value = 1; progWin.update();
+        clearArtworkVariables (); pbar.value = 2; progWin.update();
+        setWbcVariables ();
+    setProgWinContent ("Used Inks", 0, 2); pbar.value = 1; progWin.update();
+        clearCxVariables (); pbar.value = 2; progWin.update();
+        usedInksList ();
+    setProgWinContent ("Die Cut Passer", 0, 1); pbar.value = 1; progWin.update();
+        setDieCutPasser ();
+    setProgWinContent ("Low Inks Eater", 0, 1); pbar.value = 1; progWin.update();
+        lowInksEater (6);
+    setProgWinContent ("Negative Inks Eater", 0, 1); pbar.value = 1; progWin.update();    
+        negativeEater ();
+    setProgWinContent ("Litho Mark", 0, 1); pbar.value = 1; progWin.update();    
+        lithoMark ();
+    setProgWinContent ("Passer Cross Marks", 0, 1); pbar.value = 1; progWin.update();    
+        doubleInksCrossMark ();
+    //setProgWinContent ("Crop Marks, Logos, Punch Numbers", 0, 1); pbar.value = 0; progWin.update();    
+        cropMarkLogoNumber ();
+    setProgWinContent ("Color Scales", 0, 2); pbar.value = 1; progWin.update();0
+        setSxObjectStyles ();pbar.value = 2; progWin.update();
+        colorScales ();
+    progWin.hide();
+    alert("Document pre-press setting-up was executed successfully...");
+
+};
+function clearCxVariables () { // vyprata textove premenne a znakove styly C1 az C8
+    for (var i =1 ; i <= 8; i++) {
+        myTextVariable.itemByName("C" + i).variableOptions.contents = "";
+        myCharacterStyle.itemByName("C" + i).fillColor = mySwatch[3];
+    };
+};
+function getXMPInkProperty (egInkIndex, egInkTag) { // vrati hodnotu ulozenu v tagu podla indexu egInku   
+        return myLinkXmp.getProperty("http://ns.esko-graphics.com/grinfo/1.0/", "inks[" + egInkIndex + "]/egInk:" + egInkTag);
+};
+function getXMPsmartInkProperty (smartInksIndex, smartInkTag) { // vrati hodnotu ulozenu v tagu podla indexu smartInku
+    var result;
+    if (myLinkedXmp.doesStructFieldExist("http://my.prepressSchema.namespace/", "smartInks[" + smartInksIndex + "]", "http://my.prepressSchema.namespace/smartink#", smartInkTag)) {
+        result = myLinkedXmp.getStructField("http://my.prepressSchema.namespace/", "smartInks[" + smartInksIndex + "]", "http://my.prepressSchema.namespace/smartink#", smartInkTag).toString();
+    } else { result = ""; };
+    return result;
+};
+function getXMPproperty (nameSpace, propertyName, defaultValue) { // vrati hodnotu ulozenu v tagu
+    var result;
+    if (myLinkedXmp.doesPropertyExist(nameSpace, propertyName)) {
+        result = myLinkedXmp.getProperty(nameSpace, propertyName).toString();
+    } else { result = defaultValue; };
+    return result;
+};
+function getXMPInkIndex (egInkTagName, egInkTagValue) { // vrati index egInku  podla hodnoty tagu
+    var myTagValue = "";
+    for (var i =1 ; i <= myXmpInksCount; i++) {
+        myTagValue = myLinkXmp.getProperty("http://ns.esko-graphics.com/grinfo/1.0/", "inks[" + i + "]/egInk:" + egInkTagName);
+        if (myTagValue == egInkTagValue) {break};
+    };
+    return i;
+};
+function clearArtworkVariables () { // vyprata "artwork" textove premenne a znakove styly
+    myTextVariable.itemByName("artworkID").variableOptions.contents = "";
+    myCharacterStyle.itemByName("artworkID").fillColor = mySwatch[3];
+    myTextVariable.itemByName("artworkStandard").variableOptions.contents = "";
+    myCharacterStyle.itemByName("artworkStandard").fillColor = mySwatch[3];
+    myTextVariable.itemByName("artworkName").variableOptions.contents = "";
+    myCharacterStyle.itemByName("artworkName").fillColor = mySwatch[3];
+};
+function setArtworkVariables () { // priradí "artwork" data do textových premenných a nastavý znakové styly
+        var artworkID = egInks.getKey("printingmethod", "name", "artworkID").toString();
+        var oldFirstLetter = artworkID.charAt (0);
+        var shortID = artworkID.slice (1);
+        var plateLetter = oldFirstLetter;
+        if (dh.plateWidth == 1160.00) { 
+            plateLetter = "I";
+        };
+        if (dh.plateWidth == 1220.00) {
+            plateLetter = "U";
+        };
+        if (oldFirstLetter != plateLetter) {
+            artworkID = plateLetter + shortID;
+        };
+        myTextVariable.itemByName("artworkID").variableOptions.contents = artworkID;
+        //myTextVariable.itemByName("artworkID").variableOptions.contents = egInks.getKey("printingmethod", "name", "artworkID").toString();
+        myCharacterStyle.itemByName("artworkID").fillColor = mySwatch.itemByName("Registration");
+        myTextVariable.itemByName("artworkStandard").variableOptions.contents = egInks.getKey("printingmethod", "name", "artworkStandard").toString();
+        myCharacterStyle.itemByName("artworkStandard").fillColor = mySwatch.itemByName("Registration");
+        myTextVariable.itemByName("artworkName").variableOptions.contents = egInks.getKey("printingmethod", "name", "artworkName").toString();
+        myCharacterStyle.itemByName("artworkName").fillColor = mySwatch.itemByName("Registration");
+};
+function setWbcVariables () { // priradí data z WebCentra do textových premenných a nastavý znakové styly
+    if (myLinkXmp.getProperty("http://my.wbcSchema.namespace/", "customerID").toString() != "") {
+        var artworkID = myLinkXmp.getProperty("http://my.wbcSchema.namespace/", "sapDescription").toString().substr(0, 17);
+        var oldFirstLetter = artworkID.charAt (0);
+        var shortID = artworkID.slice (1);
+        var plateLetter = oldFirstLetter;
+        if (dh.plateWidth == 1160.00) { 
+            plateLetter = "I";
+        };
+        if (dh.plateWidth == 1220.00) {
+            plateLetter = "U";
+        };
+        if (oldFirstLetter != plateLetter) {
+            artworkID = plateLetter + shortID;
+        };
+        myTextVariable.itemByName("artworkID").variableOptions.contents = artworkID;
+        myCharacterStyle.itemByName("artworkID").fillColor = mySwatch.itemByName("Registration");
+        
+        var customerID = myLinkXmp.getProperty("http://my.wbcSchema.namespace/", "customerID").toString();
+        var projectNumber = myLinkXmp.getProperty("http://my.wbcSchema.namespace/", "projectNumber").toString();
+        var artworkStandard = customerID + "-" + projectNumber;
+        myTextVariable.itemByName("artworkStandard").variableOptions.contents = artworkStandard;
+        myCharacterStyle.itemByName("artworkStandard").fillColor = mySwatch.itemByName("Registration");
+        
+        var artworkName = myLinkXmp.getProperty("http://my.wbcSchema.namespace/", "projectName").toString();
+        myTextVariable.itemByName("artworkName").variableOptions.contents = artworkName;
+        myCharacterStyle.itemByName("artworkName").fillColor = mySwatch.itemByName("Registration");
+    } else {
+        setArtworkVariables ();
+    };
+};
+function createProcessSwatch (swatchName, swatchColorValue) { // vytvorí procesný swatch
+        if (mySwatch.itemByName(swatchName) == null) {
+            myColor.add({name:swatchName, space:1129142603, colorValue:swatchColorValue});
+        };
+};
+function setDieCutPasser () { //nastaví kruhový passer
+    myXmpUsedInksCount = egInks.getInvertKey ("id", "attribute", "technical").length;
+    myXmpProcessInksCount = egInks.getKey ("id", "type", "process").length;
+    myXMPSpotInksCount = myXmpUsedInksCount - myXmpProcessInksCount;
+    if (myMixedInk.itemByName("DieCutMarks") != null) {
+            myMixedInk.itemByName("DieCutMarks").remove();
+    };
+    if (myXMPSpotInksCount > 0 &&  myXmpUsedInksCount > 1) { // podmienka pre mixed ink
+        myMixedInksList = egInks.getInvertKey ("ink", "attribute", "technical");
+        myMixedInksTintList = egInks.getInvertKey ("tint", "attribute", "technical");
+        myObjectStyle.itemByName("DieCutMarks").strokeColor = makeMixColor ("DieCutMarks", myMixedInksList, myMixedInksTintList);
+    } else if (myXMPSpotInksCount == 0 &&  myXmpProcessInksCount > 0) { //  crop ink z CMYKu
+        createProcessSwatch ("DieCutMarks", myProcessInksTintList);
+        myObjectStyle.itemByName("DieCutMarks").strokeColor = mySwatch.itemByName("DieCutMarks");
+    } else if (myXMPSpotInksCount == 1 &&  myXmpProcessInksCount == 0) { // iba 1 direktna
+        if (egInks.getInvertKey ("tint", "attribute", "technical")[0] > 0) { // ak ide o pozitiv
+            myObjectStyle.itemByName("DieCutMarks").strokeColor = egInks.getInvertKey ("swatch", "attribute", "technical")[0];
+        } else {
+            myObjectStyle.itemByName("DieCutMarks").strokeColor = mySwatch[2];
+        };
+    };
+};
+function setSxObjectStyles () { // nastavi objektove styly S1 az Sn
+    var usedNames = egInks.filter("name", "usedInksFilterCondition"); // pole mien okrem technických
+    var usedUnderPrints = egInks.filter("printingmethod", "usedInksFilterCondition"); // pole printingmethod okrem technických
+    var usedSwatches = [];
+    var subName = "";
+    var clearNames = []; // pole mien bez prípon
+    var usedTints = []; // pole použitých tint
+    var mixedName = "";
+    var usedInks = [];
+    for (var i =0 ; i < usedNames.length; i++) { // polia bez duplicity
+        if (usedNames[i].search("_1") >= 0 || usedNames[i].search("_2") >= 0) {
+            subName = usedNames[i].substr(0, usedNames[i].length - 2);
+            clearNames.push(subName);
+            usedNames[i] = subName;
+            for (var j =0 ; j < usedNames.length; j++) { // prehlada a vyhodi dvojca
+                 if (usedNames[j].search(subName + "_1") >= 0 || usedNames[j].search(subName + "_2") >= 0) {
+                     usedNames.splice(j, 1);
+                     usedUnderPrints.splice(j, 1);
+                 };
+            };
+        } else {
+            clearNames.push(usedNames[i]);
+        };
+    //$.writeln(clearNames[i] + " / " + usedUnderPrints[i]);
+    };
+    for (var i =0 ; i < clearNames.length; i++) {
+        usedInks = [];
+        usedTints = [];
+        mixedName = "Scale" + (i +1);
+        if (usedUnderPrints[i] != "unknown") { // ak ma definovany underprint
+            usedInks = egInks.getSubStr ("ink", "name", clearNames[i]).concat(egInks.getSubStr ("ink", "name", usedUnderPrints[i])); // spoji ink a underprint ink 
+        } else {
+            usedInks = egInks.getSubStr ("ink", "name", clearNames[i]);
+        };
+        for (var j = 0; j < usedInks.length; j++) { // nastavi všetky tinty na 100% 
+            usedTints.push(100); 
+        };
+        scaleStrip.add();
+        scaleStrip.lastItem().swatch = makeMixColor (mixedName, usedInks, usedTints);
+        //$.writeln(mixedName + " / " + usedInks.length + " / " + usedTints.length);
+    };
+    for (var i =0 ; i < scaleStrip.length; i++) {
+        if (myDocument.objectStyles.itemByName("Scale" + (i + 1)) == null ) {
+            myObjectStyle.add({name: ("Scale" + (i + 1))});
+        };
+        scaleStrip[i].style = myObjectStyle.itemByName("Scale" + (i + 1));
+        scaleStrip[i].style.fillColor = scaleStrip[i].swatch;
+        scaleStrip[i].style.strokeColor = mySwatch[0];
+    };
+};
+function showProps(obj, objName) { // pomocna pri ladeni - zobrazenie vycislitelnych parametrov objektu
+  var result = "";
+  for (var i in obj) {
+    if (obj.hasOwnProperty(i)) {
+        result += objName + "." + i + " = " + obj[i] + "\n";
+    };
+  };
+  return result;
+};
+function showItems(obj, note) { // pomocna pri ladeni- vypis poloziek objektu
+  for (var i in obj) {
+    $.writeln(note + " " + obj[i]);
+  };
+};
+function showAllProps() { // pomocna pri ladeni - vypis vsetkych parametrov egInks
+    for (i in egInks) { 
+        $.write(showProps( egInks[i], " egInks[" + i + "]") );
+    };
+};
+function setEgInks () { // nacita XMP data a nastaví egInks properties
+    egInks = new EgInks();
+    for (var i = 1; i <= myXmpInksCount; i++) {
+        if (getXMPInkProperty (i, "omask") == "True") {
+            myXmpInksCount--;
+        } else {
+            egInks.add();
+            with (egInks.lastItem()) { // priradí XMP data
+                name = getXMPInkProperty (i, "name");
+                //name = getXMPInkProperty (i, "egname");
+                type = getXMPInkProperty (i, "type");
+                book = getXMPInkProperty (i, "book");
+                egname = getXMPInkProperty (i, "egname");
+                //frequency = Number(getXMPInkProperty (i, "frequency"));
+                frequency = Number(getXMPsmartInkProperty (i, "coverage"));
+                angle = Number(getXMPInkProperty (i, "angle"));
+                //dotshape = getXMPInkProperty (i, "dotshape");
+                dotshape = getXMPsmartInkProperty (i, "separation");
+                r = Number(getXMPInkProperty (i, "r"));
+                g = Number(getXMPInkProperty (i, "g"));
+                b = Number(getXMPInkProperty (i, "b"));
+                attribute = getXMPInkProperty (i, "attribute");
+                //printingmethod = getXMPInkProperty (i, "printingmethod");
+                printingmethod = getXMPsmartInkProperty (i, "overprint");
+                setColors();
+                setTint();
+            };
+        };
+        //$.writeln(i + " " + egInks.lastItem().name + " / " + egInks.lastItem().type + " / " + egInks.lastItem().attribute);
+        //$.writeln(i + " " + egInks.lastItem().swatch.name + " / " + egInks.lastItem().ink.name + " / " + egInks.lastItem().tint);
+    };
+};
+function usedInksList () { // výpis použitých farieb
+    var txtVar  = egInks.getInvertKey("name", "attribute", "technical");
+    var fillColor = egInks.getInvertKey("swatch", "attribute", "technical");
+    for (var i = 0; i < txtVar.length; i++) {
+        myTextVariable.itemByName("C" + (i +1)).variableOptions.contents = txtVar[i];
+        myCharacterStyle.itemByName("C" + (i+1)).fillColor = fillColor[i];
+    };
+};
+function lowInksEater (gain) { // vyfarbi ink eater farbou s mensou spotrebou ako prah
+	var fillColor = egInks.compare("swatch", "frequency", "<=", gain);
+	if (fillColor.length == 0) {
+	    myObjectStyle.itemByName("InksEater").fillColor = mySwatch[0];
+	} else if (fillColor.length == 1) {
+	    myObjectStyle.itemByName("InksEater").fillColor = fillColor[0];
+	} else {
+	    var myMixedInksList = egInks.compare("ink", "frequency", "<=", gain);
+	    var myMixedInksTintList = egInks.compare("tint", "frequency", "<=", gain);
+        for (var i in myMixedInksTintList) {
+            myMixedInksTintList[i] = 100;
+        };
+         if (myMixedInk.itemByName("InksEater") != null) {
+            myMixedInk.itemByName("InksEater").remove();
+         };
+	    //myMixedInk.add(myMixedInksList, myMixedInksTintList, {name:"InksEater"});
+	    //myObjectStyle.itemByName("InksEater").fillColor = mySwatch.itemByName("InksEater");
+        myObjectStyle.itemByName("InksEater").fillColor = makeMixColor ("InksEater", myMixedInksList, myMixedInksTintList);
+	};
+};
+function negativeEater () { // vyfarbi neagtivne bocne pasy
+	var fillColor = egInks.filter("swatch", "negativeEaterFilterCondition");
+	if (fillColor.length == 0) {
+	    myObjectStyle.itemByName("NegativeInksEater").fillColor = mySwatch[0];
+	} else if (fillColor.length == 1) {
+	    myObjectStyle.itemByName("NegativeInksEater").fillColor = fillColor[0];
+	} else {
+	    var myMixedInksList = egInks.filter("ink", "negativeEaterFilterCondition");
+	    var myMixedInksTintList = egInks.filter("tint", "negativeEaterFilterCondition");
+        for (var i in myMixedInksTintList) {
+            myMixedInksTintList[i] = 100;
+        };
+         if (myMixedInk.itemByName("NegativeInksEater") != null) {
+            myMixedInk.itemByName("NegativeInksEater").remove();
+         };
+	    //myMixedInk.add(myMixedInksList, myMixedInksTintList, {name:"NegativeInksEater"});
+	    //myObjectStyle.itemByName("NegativeInksEater").fillColor = mySwatch.itemByName("NegativeInksEater");
+        myObjectStyle.itemByName("NegativeInksEater").fillColor = makeMixColor ("NegativeInksEater", myMixedInksList, myMixedInksTintList);
+	};
+};
+function lithoMark () { // vyfarbi litograficku znacku
+    var lithoFillColor = [];
+    if (egInks.getSubStr("swatch", "printingmethod", /LIT/i).length > 0) { // ak existuje farba oznacena LIT
+        lithoFillColor = egInks.getSubStr("swatch", "printingmethod", /LIT/i);
+    } else if (egInks.getSubStr("swatch", "name", /white/i).length > 0) { // ak existuje biela
+        lithoFillColor = egInks.getSubStr("swatch", "name", /white/i);
+    } else if (egInks.getDarkest("swatch", "positiveInksFilterCondition").length > 0) { // ak je najtmavsia farba pozitivna
+        lithoFillColor = egInks.getDarkest("swatch", "positiveInksFilterCondition");
+    } else if (egInks.getDarkest("swatch", "negativeInksFilterCondition").length > 0) { // ak je najtmavsia farba negativna
+        lithoFillColor[0] = app.activeDocument.swatches[2]; // potom = paper aby nesplyvala s negativ ink eater
+    } else {
+        lithoFillColor = egInks.getDarkest ("swatch", "usedInksFilterCondition"); // inak pouzite
+    };
+    try {
+        myObjectStyle.itemByName("LithoMark").fillColor = lithoFillColor[0]; // prva polozka zo zoznamu farieb
+    } catch (myError){
+        alert("Litho mark was not changed!");
+    };
+};
+function doubleInksCrossMark () { // vyfarbi skaly
+    var strokeColorA = egInks.filter("ink", "crossMarkACondition"); // vsetky ostatne
+    var strokeColorB = egInks.getSubStr("ink", "name", "_1"); // iba originalne
+    var strokeTintA = egInks.filter("tint", "crossMarkACondition");
+    var strokeTintB = egInks.getSubStr("tint", "name", "_1");
+    if (strokeColorA.length == 0) {
+	    myObjectStyle.itemByName("Passer").strokeColor = mySwatch[0];
+	} else if (strokeColorA.length == 1) {
+	   myObjectStyle.itemByName("Passer").strokeColor = egInks.filter("swatch", "crossMarkACondition")[0];
+       myObjectStyle.itemByName("Passer").strokeWeight = 0.25;
+	} else {
+        for (var i in strokeTintA) {
+            strokeTintA[i] = 100;
+        };
+        if (myMixedInk.itemByName("Passer") != null) {
+            myObjectStyle.itemByName("Passer").strokeColor = mySwatch[0];
+            myMixedInk.itemByName("Passer").remove();
+        };
+        //myMixedInk.add(strokeColorA, strokeTintA, {name:"Passer"});
+        //myObjectStyle.itemByName("Passer").strokeColor = mySwatch.itemByName("Passer");
+        myObjectStyle.itemByName("Passer").strokeColor = makeMixColor ("Passer", strokeColorA, strokeTintA);
+        myObjectStyle.itemByName("Passer").strokeWeight = 0.25;
+    };
+    if (strokeColorB.length == 0) {
+        myObjectStyle.itemByName("Passer_1").strokeColor = mySwatch[0];
+	} else if (strokeColorB.length == 1) {
+        myObjectStyle.itemByName("Passer_1").strokeColor = egInks.getSubStr("swatch", "name", "_1")[0];
+        myObjectStyle.itemByName("Passer_1").strokeWeight = 0.25;
+        myObjectStyle.itemByName("Passer_1").overprintStroke = true;
+	} else {
+        for (var i in strokeTintB) {
+            strokeTintB[i] = 100;
+        };
+        if (myMixedInk.itemByName("Passer_1") != null) {
+            myObjectStyle.itemByName("Passer_1").strokeColor = mySwatch[0];
+            myMixedInk.itemByName("Passer_1").remove();
+        };
+        //myMixedInk.add(strokeColorB, strokeTintB, {name:"Passer_1"});
+        //myObjectStyle.itemByName("Passer_1").strokeColor = mySwatch.itemByName("Passer_1");
+        myObjectStyle.itemByName("Passer_1").strokeColor = makeMixColor ("Passer_1", strokeColorB, strokeTintB);
+        myObjectStyle.itemByName("Passer_1").strokeWeight = 0.25;
+        myObjectStyle.itemByName("Passer_1").overprintStroke = true;
+    };
+};
+function colorScales() { // vyfarby farebnu skalu
+    var j = 1;
+    for (var i = 1; i <= 26; i++) { // priradi objektove styly
+       myDocument.pageItems.itemByName("scale" + i).applyObjectStyle(myDocument.objectStyles.itemByName("Scale" + j));
+       j++;
+       if (j > scaleStrip.length) {j = 1};
+    };
+};
+function makeMixColor (colorName, inkList, tintList) { // vytvori a vrati novu mixovanu, spot alebo CMYK farbu
+    var result = {};
+    var spotCount = 0;
+    var cmykValue = [0, 0, 0, 0];
+    var inkName = "";
+    if (inkList.length == 1 ) { // ak je zadany len jeden ink vrati swatch
+        result = egInks.getKey ("swatch", "inkName", inkList[0].name)[0];
+    } else { // inak je zadanych viac inkov
+        for (var j = 0; j < inkList.length; j++) { // spocitanie spot inkov a nastavenie CMYK hodnot
+            if (inkList[j].name.search(/process/i) < 0) { // ak sa nejedna o procesny ink
+                spotCount++;
+            } else if (inkList[j].name.search(/process cyan/i) >= 0) { // ak sa jedna o procesny cyan
+                cmykValue[0] = 100;
+            } else if (inkList[j].name.search(/process magenta/i) >= 0) { // ak sa jedna o procesny magenta
+                cmykValue[1] = 100;
+            } else if (inkList[j].name.search(/process yellow/i) >= 0) { // ak sa jedna o procesny yellow
+                cmykValue[2] = 100;
+            } else if (inkList[j].name.search(/process black/i) >= 0) { // ak sa jedna o procesny black
+                cmykValue[3] = 100;
+            };
+        };
+        if (spotCount == 0) { // ak nie je zadany ziadny spot ink
+            if (mySwatch.itemByName(colorName) != null) {
+                mySwatch.itemByName(colorName).remove();
+            };
+            createProcessSwatch (colorName, cmykValue);
+        } else { // potom je zadany aspon jeden spot ink, splnena podmienka pre mix color
+            if (myMixedInk.itemByName(colorName) != null) {
+                myMixedInk.itemByName(colorName).remove();
+            };
+            myMixedInk.add(inkList, tintList, {name:colorName}); 
+        };
+        result = mySwatch.itemByName(colorName);
+    };
+    return result;
+};
+function cropMarkLogoNumber () { // vyfarbi orezove znacky, loga a cisla raznikov
+    var posInk = egInks.getDarkest ("ink", "positiveInksFilterCondition");
+    var posDensity = 0;
+    if (posInk.length > 0) {posDensity = posInk[0].neutralDensity};
+    var negInk = egInks.getDarkest ("ink", "negativeInksFilterCondition");
+    var negDensity = 0;
+    if (negInk.length > 0) {negDensity = negInk[0].neutralDensity};
+    var deltaD = Math.abs(posDensity - negDensity); //  rozdiel denzit
+    var posDensityTreshold = (posDensity / 100 * 25); // % prah pozitivnej denzity
+	if (posDensity > negDensity && deltaD > posDensityTreshold) { /* pozitivna je tmavsia ako negativna a rozdiel je vacsi ako 50% pozitivnej */
+        var fillColor = egInks.getDarkest ("swatch", "positiveInksFilterCondition")[0];
+        setProgWinContent ("Crop Marks...", 0, 3); pbar.value = 1; progWin.update();
+            myObjectStyle.itemByName("CutMarks").strokeColor = fillColor;
+            myObjectStyle.itemByName("CutMarks").overprintStroke = true;
+        setProgWinContent ("Logos...", 0, 3); pbar.value = 2; progWin.update();
+            myObjectStyle.itemByName("Logo").fillColor = fillColor;
+            myObjectStyle.itemByName("Logo").overprintFill = true;
+        setProgWinContent ("Punch Numbers...", 0, 3); pbar.value = 3; progWin.update();
+            myParagraphStyle.itemByName("PunchNumber").fillColor = fillColor;
+            myParagraphStyle.itemByName("PunchNumber").overprintFill = true;
+	} else {
+        setProgWinContent ("Crop Marks...", 0, 3); pbar.value = 1; progWin.update();
+            myObjectStyle.itemByName("CutMarks").strokeColor = mySwatch[2];
+        setProgWinContent ("Logos...", 0, 3); pbar.value = 2; progWin.update();
+            myObjectStyle.itemByName("Logo").fillColor = mySwatch[2];
+        setProgWinContent ("Punch Numbers...", 0, 3); pbar.value = 3; progWin.update();
+            myParagraphStyle.itemByName("PunchNumber").fillColor = mySwatch[2];
+	};
+};
+function removeUnusedSwatch() { //vyhodi vsetky swatch a nahradi ciernou
+    var mySwatches = app.activeDocument.swatches;
+    var myLength = mySwatches.length;
+    var xName = "";
+    for (var i = 0; i < myLength; i++) {
+        xName = mySwatches[i].name
+        try {
+            mySwatches[i].remove(mySwatches[3]);
+            i--;
+            myLength--;
+            //$.writeln("vyhodene " + xName + " " + i +"/"+myLength);                
+        } catch (myError) {
+            //$.writeln("zostava " + xName + " " + i +"/"+myLength);
+        };
+    };
+};
+function editOneUp () {
+    app.activeWindow.transformReferencePoint = AnchorPoint.CENTER_ANCHOR; // nastavi referencny bod na stred
+    try {
+        myDocument = app.activeDocument;
+    } catch (myError) {
+        alert("You have not opened any document...");
+        return;
+    };
+    function getCheckBoxState (chkBox) {
+        var result = chkBox.value;
+        return result;
+    };
+    var w = new Window ("dialog", "Edit One-Up...");
+        w.alignChildren = "left";
+        var tpanel = w.add ("group");        
+        var artworkTab = tpanel.add ("group");
+            artworkTab.orientation = "row";
+        var p4 = artworkTab.add('panel {text: "", borderstyle: "gray", alignChildren: "fill", alignment: "fill"}');
+            p4.g1 = p4.add("group");
+                var artworkNameCheckBox = p4.g1.add("checkbox");
+                    artworkNameCheckBox.value = false;
+                    artworkNameCheckBox.onClick = function () {
+                        artworkNameStatictext.enabled = getCheckBoxState (artworkNameCheckBox);
+                        artworkName.enabled = getCheckBoxState (artworkNameCheckBox);
+                        loadArtworkBtn.enabled = getCheckBoxState (artworkNameCheckBox);
+                    };
+                var artworkNameStatictext = p4.g1.add('statictext {text: "Artwork: ", justify: "left"}');
+                    artworkNameStatictext.enabled = getCheckBoxState (artworkNameCheckBox);
+                var artworkName = p4.g1.add("edittext", undefined,  dh.artworkFile.displayName, {readonly: true, justify: "left"});
+                    artworkName.characters = 35;
+                    artworkName.enabled = getCheckBoxState (artworkNameCheckBox);
+                var loadArtworkBtn = p4.g1.add ("button", undefined, "Select");
+                    loadArtworkBtn.enabled = getCheckBoxState (artworkNameCheckBox);
+                    loadArtworkBtn.onClick = function () {
+                        var loadFile = dh.artworkFile.openDlg ("Load artwork file", "PDF: *.pdf, All files: *.*");
+                        if (loadFile != null) {
+                            dh.artworkFile = loadFile;
+                            artworkName.text = dh.artworkFile.displayName;
+                            // nacita XMP data do formulara
+                            readXMPdata (dh.artworkFile);
+                            if (artworkAngle.text != getXMPproperty ("http://my.prepressSchema.namespace/", "artworkAngle", 0)) {
+                                artworkAngleCheckBox.value = true;
+                                artworkAngleStatictext.enabled = getCheckBoxState (artworkAngleCheckBox);
+                                artworkAngle.enabled = getCheckBoxState (artworkAngleCheckBox);
+                                artworkAngles.enabled = getCheckBoxState (artworkAngleCheckBox);
+                                artworkAngle.text = getXMPproperty ("http://my.prepressSchema.namespace/", "artworkAngle", 0);
+                                dh.artworkAngle = Number(artworkAngle.text);
+                            };
+                            if (punchNumAngle.text != getXMPproperty ("http://my.prepressSchema.namespace/", "punchNumAngle", 0) && getXMPproperty ("http://my.prepressSchema.namespace/", "punchNumPrint", "False") != "False") {
+                                punchNumCheckBox.value = true;
+                                punchNumStatictext.enabled = getCheckBoxState (punchNumCheckBox);
+                                punchNumAngle.enabled = getCheckBoxState (punchNumCheckBox);
+                                punchNumAngles.enabled = getCheckBoxState (punchNumCheckBox);
+                                punchNumAngle.text = getXMPproperty ("http://my.prepressSchema.namespace/", "punchNumAngle", 0);
+                                dh.punchNumAngle = Number(punchNumAngle.text);
+                            };
+                            if (punchNumPrintCheckBox.value != getXMPproperty ("http://my.prepressSchema.namespace/", "punchNumPrint", false)) {
+                                if (getXMPproperty ("http://my.prepressSchema.namespace/", "punchNumPrint", false) == "True") {
+                                    punchNumPrintCheckBox.value = true;
+                                } else {
+                                    punchNumPrintCheckBox.value = false;
+                                };
+                            };
+                            if (logoAngle.text != getXMPproperty ("http://my.wbcSchema.namespace/", "logo", 0) && getXMPproperty ("http://my.wbcSchema.namespace/", "logo", 0) != "0"  && getXMPproperty ("http://my.wbcSchema.namespace/", "logo", 0) != "-0") {
+                                logoAngleCheckBox.value = true;
+                                logoAngleStatictext.enabled = getCheckBoxState (logoAngleCheckBox);
+                                logoAngle.enabled = getCheckBoxState (logoAngleCheckBox);
+                                logoAngles.enabled = getCheckBoxState (logoAngleCheckBox);
+                                logoNoteStatictext.enabled = getCheckBoxState (logoAngleCheckBox);
+                                logoAngle.text = getXMPproperty ("http://my.wbcSchema.namespace/", "logo", 0);
+                                dh.logoAngle = Number(logoAngle.text);
+                            };
+                            if (getXMPproperty ("http://my.wbcSchema.namespace/", "logo", 0) == 0  && getXMPproperty ("http://my.wbcSchema.namespace/", "logo", 0) == -0) {
+                                logosPrintCheckBox.value = false;
+                            } else {
+                                logosPrintCheckBox.value = true;
+                            };
+                        };
+                    };
+            p4.g2 = p4.add("group");
+                var artworkAngleCheckBox = p4.g2.add("checkbox");
+                    artworkAngleCheckBox.value = false;
+                    artworkAngleCheckBox.onClick = function () {
+                        artworkAngleStatictext.enabled = getCheckBoxState (artworkAngleCheckBox);
+                        artworkAngle.enabled = getCheckBoxState (artworkAngleCheckBox);
+                        artworkAngles.enabled = getCheckBoxState (artworkAngleCheckBox);
+                    };
+                var artworkAngleStatictext = p4.g2.add('statictext {text: "Artwork angle [°]: ", justify: "left"}');
+                    artworkAngleStatictext.enabled = getCheckBoxState (artworkAngleCheckBox);
+                p4.g2.g0 = p4.g2.add("group {alignChildren: 'left', orientation: 'stack'}");
+                var artworkAngle = p4.g2.g0.add("edittext", [0, 0, 72, 20]);
+                    artworkAngle.text = dh.artworkAngle;
+                    artworkAngle.enabled = getCheckBoxState (artworkAngleCheckBox);
+                    artworkAngle.onChange = function () {
+                        dh.artworkAngle = Number(artworkAngle.text);
+                    };
+                    artworkAngle.onChanging = function () {
+                        var valid = /^[\d.-]+$/.test (artworkAngle.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                var artworkAngles = p4.g2.g0.add("dropdownlist", [0, 0, 90, 20], ["0", "45", "90", "135", "180", "-45", "-90"]);
+                    artworkAngles.minimumSize.width = 70;
+                    artworkAngles.enabled = getCheckBoxState (artworkAngleCheckBox);
+                    artworkAngles.onChange = function () {
+                        artworkAngle.text = artworkAngles.selection.text;
+                        dh.artworkAngle = Number(artworkAngle.text);
+                        artworkAngle.active = true;
+                    };
+            p4.add("panel"); // separator
+            p4.g3 = p4.add("group");
+                var cropMarksLengthStatictext = p4.g3.add('statictext {text: "Crop Marks length [mm]: ", justify: "left"}');
+                    cropMarksLengthStatictext.enabled = false;
+                var cropMarkLength = p4.g3.add('edittext {characters: 4, justify: "center"}');
+                    cropMarkLength.text = dh.cropMarkLength;
+                    cropMarkLength.onChange = function () {
+                        dh.cropMarkLength = Number(cropMarkLength.text);
+                    };
+                    cropMarkLength.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (cropMarkLength.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                    cropMarkLength.enabled = false;
+                var cropMarksThicknessStatictext = p4.g3.add('statictext {text: "thickness [pt]: "}');
+                    cropMarksThicknessStatictext.enabled = false;
+                var cropMarkThickness = p4.g3.add('edittext {characters: 4, justify: "center"}');
+                    cropMarkThickness.text = dh.cropMarkThickness;
+                    cropMarkThickness.onChange = function () {
+                        dh.cropMarkThickness = Number(cropMarkThickness.text);
+                    };
+                    cropMarkThickness.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (cropMarkThickness.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                    cropMarkThickness.enabled = false;
+            p4.add("panel"); // separator
+            p4.g4 = p4.add("group");
+                var punchNumCheckBox = p4.g4.add("checkbox");
+                    punchNumCheckBox.value = false;
+                    punchNumCheckBox.onClick = function () {
+                        punchNumStatictext.enabled = getCheckBoxState (punchNumCheckBox);
+                        punchNumAngle.enabled = getCheckBoxState (punchNumCheckBox);
+                        punchNumAngles.enabled = getCheckBoxState (punchNumCheckBox);
+                    };
+                var punchNumStatictext = p4.g4.add('statictext {text: "Punch Number angle  [°]: ", justify: "left"}');
+                    punchNumStatictext.enabled = getCheckBoxState (punchNumCheckBox);
+                p4.g4.g0 = p4.g4.add("group {alignChildren: 'left', orientation: 'stack'}");
+                var punchNumAngle = p4.g4.g0.add("edittext", [0, 0, 72, 20]);
+                    punchNumAngle.text = dh.punchNumAngle;
+                    punchNumAngle.enabled = getCheckBoxState (punchNumCheckBox);
+                    punchNumAngle.onChange = function () {
+                        dh.punchNumAngle = Number(punchNumAngle.text);
+                    };
+                    punchNumAngle.onChanging = function () {
+                        var valid = /^[\d.-]+$/.test (punchNumAngle.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                var punchNumAngles = p4.g4.g0.add("dropdownlist", [0, 0, 90, 20], ["0", "45", "90", "135", "180", "-45", "-90"]);
+                    punchNumAngles.minimumSize.width = 70;
+                    punchNumAngles.enabled = getCheckBoxState (punchNumCheckBox);
+                    punchNumAngles.onChange = function () {
+                        punchNumAngle.text = punchNumAngles.selection.text;
+                        dh.punchNumAngle = Number(punchNumAngle.text);
+                        punchNumAngle.active = true;
+                    };
+                var punchNumPrintStatictext = p4.g4.add('statictext {text: "Print Punch Numbers: ", justify: "right", characters: 18}');
+                    punchNumPrintStatictext.enabled = false;   
+                var punchNumPrintCheckBox = p4.g4.add("checkbox");
+                    punchNumPrintCheckBox.enabled = true;
+                    punchNumPrintCheckBox.value = myDocument.layers.itemByName("PunchNumbers").printable;
+            p4.g5 = p4.add("group");
+                var punchNumSizeStatictext = p4.g5.add('statictext {text: "Punch Number size [pt]: ", justify: "left"}');
+                    punchNumSizeStatictext.enabled = false;
+                var punchNumSize = p4.g5.add('edittext {characters: 4, justify: "center"}');
+                    punchNumSize.text = dh.punchNumSize;
+                    punchNumSize.onChange = function () {
+                        dh.punchNumSize = Number(punchNumSize.text);
+                    };
+                    punchNumSize.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (punchNumSize.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                    punchNumSize.enabled = false;
+                var punchNumOffsetStatictext = p4.g5.add('statictext {text: "offset [pt]:"}');
+                    punchNumOffsetStatictext.enabled = false;
+                var punchNumOffset = p4.g5.add('edittext {characters: 4, justify: "center"}');
+                    punchNumOffset.text = dh.punchNumOffset;
+                    punchNumOffset.onChange = function () {
+                        dh.punchNumOffset = Number(punchNumOffset.text);
+                    };
+                    punchNumOffset.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (punchNumOffset.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                    punchNumOffset.enabled = false;
+            p4.add("panel"); // separator
+            p4.g6 = p4.add("group");
+                var logoStatictext = p4.g6.add('statictext {text: "Logo: ", justify: "left"}');
+                    logoStatictext.enabled = false;
+                var logosDropList = p4.g6.add("dropdownlist", undefined, getLibraryList ());
+                    logosDropList.minimumSize.width = 70;
+                    logosDropList.selection = getLibraryIndex (dh.logoName);
+                    logosDropList.onChange = function () {
+                        dh.logoName = logosDropList.selection.text;
+                    };
+                    logosDropList.enabled = false;
+                var libraryStatictext = p4.g6.add('statictext {text: "(library item)", justify: "left"}');
+                    libraryStatictext.enabled = false;
+                var logosPrintStatictext = p4.g6.add('statictext {text: "Print Logos: ", justify: "right", characters: 20}');
+                    logosPrintStatictext.enabled = false;   
+                var logosPrintCheckBox = p4.g6.add("checkbox");
+                    logosPrintCheckBox.enabled = true;
+                    logosPrintCheckBox.value = myDocument.layers.itemByName("Logos").printable;
+            p4.g7 = p4.add("group");
+                var logoAngleCheckBox = p4.g7.add("checkbox");
+                    logoAngleCheckBox.value = false;
+                    logoAngleCheckBox.onClick = function () {
+                        logoAngleStatictext.enabled = getCheckBoxState (logoAngleCheckBox);
+                        logoAngle.enabled = getCheckBoxState (logoAngleCheckBox);
+                        logoAngles.enabled = getCheckBoxState (logoAngleCheckBox);
+                        logoNoteStatictext.enabled = getCheckBoxState (logoAngleCheckBox);
+                    };
+                var logoAngleStatictext = p4.g7.add('statictext {text: "Logo angle [°]: ", justify: "left"}');
+                    logoAngleStatictext.enabled = getCheckBoxState (logoAngleCheckBox);
+                p4.g7.g0 = p4.g7.add("group {alignChildren: 'left', orientation: 'stack'}");
+                var logoAngle = p4.g7.g0.add("edittext", [0, 0, 72, 20]);
+                    logoAngle.text = dh.logoAngle;
+                    logoAngle.enabled = getCheckBoxState (logoAngleCheckBox);
+                    logoAngle.onChange = function () {
+                        dh.logoAngle = Number(logoAngle.text);
+                    };
+                    logoAngle.onChanging = function () {
+                        var valid = /^[\d.-]+$/.test (logoAngle.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                var logoAngles = p4.g7.g0.add("dropdownlist", [0, 0, 90, 20], ["TSP", "CPY", "CPB", "TIK", "KMK", "TFR"]);
+                    logoAngles.minimumSize.width = 70;
+                    logoAngles.enabled = getCheckBoxState (logoAngleCheckBox);
+                    logoAngles.onChange = function () {
+                        switch(logoAngles.selection.text) {
+                            case "TSP":
+                                logoAngle.text = "20";
+                                break;
+                            case "CPY":
+                                logoAngle.text = "75";
+                                break;
+                            case "CPB":
+                                logoAngle.text = "135";
+                                break;
+                            case "TIK":
+                                logoAngle.text = "-45";
+                                break;
+                            case "KMK":
+                                logoAngle.text = "-105";
+                                break;
+                            case "TFR":
+                                logoAngle.text = "-165";
+                                break;
+                            };
+                        dh.logoAngle = Number(logoAngle.text);
+                        logoAngle.active = true;
+                    };   
+                var logoNoteStatictext = p4.g7.add('statictext {text: "(from punch number)", justify: "left"}');
+                    logoNoteStatictext.enabled = getCheckBoxState (logoAngleCheckBox);
+            p4.g8 = p4.add("group");
+                var logoOffsetStatictext = p4.g8.add('statictext {text: "Logo offset [mm]:"}');
+                    logoOffsetStatictext.enabled = false;
+                var logoOffset = p4.g8.add('edittext {characters: 4, justify: "center"}');
+                    logoOffset.text = dh.logoOffset;
+                    logoOffset.onChange = function () {
+                        dh.logoOffset = Number(logoOffset.text);
+                    };
+                    logoOffset.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (logoOffset.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                    logoOffset.enabled = false;
+        artworkTab.add("image", undefined, File (imagesFolder + "grafika.png"));
+        
+        dh = eval(myDocument.extractLabel("dh")); // precita a vytvori premennu z dokumentu
+            dh.artworkFile = File(myDocument.links[0].filePath);
+            artworkName.text = dh.artworkFile.displayName;
+            artworkAngle.text = dh.artworkAngle;
+            punchNumAngle.text = dh.punchNumAngle;
+            punchNumSize.text = dh.punchNumSize;
+            punchNumOffset.text = dh.punchNumOffset;
+            logosDropList.selection = getLibraryIndex (dh.logoName);
+            logoAngle.text = dh.logoAngle;
+            logoOffset.text = dh.logoOffset;
+
+        var buttonGroup = w.add ('group {alignment: "right"}');
+            buttonGroup.add ("button", undefined, "OK");
+            buttonGroup.add ("button", undefined, "Cancel");
+    
+    if (w.show () == 1) {
+         progWin.text = "One-Up editting...";
+         progWin.show();
+        dieSet = new DieSet();
+        dieSet.masterOneUp.cutDiameter = dh.cutDiameter;
+        dieSet.masterOneUp.bleedDiameter = dh.bleedDiameter;
+        dieSet.punchDieCount = dh.punchDieCount;
+        dieSet.punchHorizontalOffset = dh.dieHorizontalOffset;
+        dieSet.punchVerticalOffset = dh.dieVerticalOffset;
+        dieSet.topPunchNumber = dh.topDieNumber;
+        dieSet.punchStepCount = dh.punchStepCount;
+        dieSet.punchStepWidth = dh.punchStepWidth;
+        artworkFile = dh.artworkFile;
+        artworkRotationAngle = dh.artworkAngle;
+        dieSet.fillDieSet();
+        if (artworkNameCheckBox.value == true) {
+            //myDocument.links.everyItem().relink(dh.artworkFile);
+            relinkArtwork (dh.artworkFile);
+        };
+        if (artworkAngleCheckBox.value == true) {
+            rotateArtwork(dh.artworkAngle);
+        };
+        if (punchNumCheckBox.value == true) {
+            rotatePunchNumbers(dh.punchNumAngle);
+            if (logoAngleCheckBox.value == false) {
+                rotateLogos(dh.logoAngle + dh.punchNumAngle);
+            };
+        };
+        if (logoAngleCheckBox.value == true) {
+            rotateLogos(dh.logoAngle + dh.punchNumAngle);
+        };
+        app.activeDocument.layers.itemByName("PunchNumbers").printable = getCheckBoxState (punchNumPrintCheckBox);
+        app.activeDocument.layers.itemByName("PunchNumbers").visible = getCheckBoxState (punchNumPrintCheckBox);
+        app.activeDocument.layers.itemByName("Logos").printable = getCheckBoxState (logosPrintCheckBox);
+        app.activeDocument.layers.itemByName("Logos").visible = getCheckBoxState (logosPrintCheckBox);
+        // logo z kniznice
+        myDocument.insertLabel("dieSet", dieSet.toSource()); // vlozi objekt vysek do dokumentu        
+        myDocument.insertLabel("dh", dh.toSource()); // vlozi objekt data z dialogu do dokumentu
+        progWin.hide();
+        alert("One-Up editing was successfully...");
+    };
+};
+function prePressMenu() { // Prepress Menu
+    try {
+        var prepressMenu = app.menus.item("$ID/Main").submenus.item("Prepress");
+        prepressMenu.title;
+    } catch (myError){
+    var prepressMenu = app.menus.item("$ID/Main").submenus.add("Prepress");
+    };
+// New Template MenuItem
+    var newTemplateAction = app.scriptMenuActions.add("New Template...");
+        newTemplateAction.eventListeners.add("onInvoke", function(){ newDialog(); });
+    var newTemplateMenuItem = prepressMenu.menuItems.add(newTemplateAction);
+        prepressMenu.menuSeparators.add();
+//  Edit SubMenu
+    try {
+        var editSubmenu = prepressMenu.submenus.item("Edit...").remove();
+        editSubmenu.title;
+    } catch (myError){
+        //var editSubmenu = prepressMenu.submenus.add("Edit...");
+    };
+    //editSubmenu.menuSeparators.add();
+    var editOneupAction = app.scriptMenuActions.add("Edit One-Up...");
+        editOneupAction.eventListeners.add("onInvoke", function(){ editOneUp(); });
+    //editSubmenu.menuItems.add(editOneupAction);
+    var editOneUpMenuItem = prepressMenu.menuItems.add(editOneupAction);
+// Run Prepress MenuItem
+        prepressMenu.menuSeparators.add();
+    var runSetupAction = app.scriptMenuActions.add("Run Setting-up...");
+        runSetupAction.eventListeners.add("onInvoke", function(){ prepressSetup(); });
+    var runSetupMenuItem = prepressMenu.menuItems.add(runSetupAction);
+};
+function createProgressWindow () { 
+    var w = new Window ("palette", "Progress Window...");
+        var message = w.add('statictext {text: "Process State...", characters: 40}');
+        var pbar = w.add ('progressbar', undefined, 0, 100);
+        pbar.preferredSize.width = 300;
+    return w;
+};
+function setProgWinContent (msg, min, max) {
+    message.text = msg;
+    pbar.minvalue = min;
+    pbar.maxvalue = max;
+};
+function loadXMPLibrary() { // load the XMPScript library
+    if ( !ExternalObject.AdobeXMPScript ){
+        try{
+            ExternalObject.AdobeXMPScript = new ExternalObject('lib:AdobeXMPScript');
+        } catch (e) {
+            alert('Unable to load the AdobeXMPScript library!'); 
+            return false;
+        };
+    };
+    return true;
+};
+function unloadXMPLibrary() { // unload the XMPScript library
+    if ( ExternalObject.AdobeXMPScript ) {
+        try {
+            ExternalObject.AdobeXMPScript.unload(); 
+            ExternalObject.AdobeXMPScript = undefined;
+        } catch (e) {
+            alert('Unable to unload the AdobeXMPScript library!');
+        };
+    };
+};
+function readXMPdata (source) {
+    if (loadXMPLibrary()) { // read xml packet
+        myLinkedFile = File(source);
+        xmpLinkedFile = new XMPFile(myLinkedFile.fsName, XMPConst.UNKNOWN, XMPConst.OPEN_FOR_READ);
+        myLinkedXmp = xmpLinkedFile.getXMP();
+        xmpLinkedFile.closeFile(XMPConst.CLOSE_UPDATE_SAFELY);
+        unloadXMPLibrary();
+    };
+};
+
