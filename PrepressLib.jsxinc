@@ -1,6 +1,6 @@
 ﻿// © 2018 Ing. Jaroslav ONDO
 /**
-* @@@BUILDINFO@@@ PrepressLib.jsx !Version! Tue Oct 16 2018 07:38:16 GMT+0200
+* @@@BUILDINFO@@@ PrepressLib.jsxinc !Version! Thu Nov 08 2018 09:15:05 GMT+0100
 */
 
 #script "Prepress Library"
@@ -2322,7 +2322,7 @@ function editOneUp () {
                                 logoAngle.text = "135";
                                 break;
                             case "TIK":
-                                logoAngle.text = "-45";
+                                logoAngle.text = "-56.5";
                                 break;
                             case "KMK":
                                 logoAngle.text = "-105";
