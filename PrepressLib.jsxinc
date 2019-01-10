@@ -2,7 +2,7 @@
 /**
 * @@@BUILDINFO@@@ PrepressLib.jsxinc !Version! Thu Nov 08 2018 09:15:05 GMT+0100
 */
-
+// swatch Paper v Character Color je transparentny
 #script "Prepress Library"
 #targetengine "session"
 
