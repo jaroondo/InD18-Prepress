@@ -1,8 +1,7 @@
-﻿// © 2018 Ing. Jaroslav ONDO
+﻿// © 2019 Ing. Jaroslav ONDO
 /**
-* @@@BUILDINFO@@@ PrepressLib.jsxinc !Version! Thu Nov 08 2018 09:15:05 GMT+0100
+* @@@BUILDINFO@@@ PrepressLib.jsxinc !Version! Mon Jan 14 2019 21:26:28 GMT+0100
 */
-// swatch Paper v Character Color je transparentny
 #script "Prepress Library"
 #targetengine "session"
 
@@ -1048,8 +1047,580 @@ function drawLibraryMarks () { //vlozi znacky z kniznice
         placeAsset ("CP info", [(getOneUp(1, 1).centerX  - (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(24, 1).centerY], 90);
         placeAsset ("CP info", [(getOneUp(14, 27).centerX  + (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(4, 27).centerY], -90);
         placeAsset ("CP info", [(getOneUp(14, 27).centerX  + (dieSet.masterOneUp.getCutRadius()/2)), getOneUp(11, 27).centerY], -90);
+    }; 
+};
+function afterLoadDocument () { // nacita premenne z dokumentu
+    try {
+        myDocument = app.activeDocument;
+    } catch (myError) {
+        alert("You have not opened any document...");
+        return;
     };
-    
+    dh = eval(myDocument.extractLabel("dh")); // precita a vytvori premennu z dokumentu
+    dieSet = new DieSet();
+    dieSet.masterOneUp.cutDiameter = dh.cutDiameter;
+    dieSet.masterOneUp.bleedDiameter = dh.bleedDiameter;
+    dieSet.punchDieCount = dh.punchDieCount;
+    dieSet.punchHorizontalOffset = dh.dieHorizontalOffset;
+    dieSet.punchVerticalOffset = dh.dieVerticalOffset;
+    dieSet.topPunchNumber = dh.topDieNumber;
+    dieSet.punchStepCount = dh.punchStepCount;
+    dieSet.punchStepWidth = dh.punchStepWidth;
+    dieSet.fillDieSet();
+};
+function drawScales () { // nakresli skaly
+    var myLayer = myDocument.layers.add({name: "Scales"});
+    for (var i = 1; i < dh.punchStepCount; i++) {
+        addCircle (getOneUp(1, i + 1).centerX, (getOneUp(14, 1).getTop() + 3.75), 8, "scale"+i);
+        getPageItem ("scale"+i).fillColor = myDocument.swatches[3];
+    };
+};
+function relinkArtwork (artworkFile) { // prelinkuje artwork
+    /*myDocument.links[i].parent.parent.pdfs[0].pdfAttributes.pdfCrop = 1131573325; // nastavenie orezu PDF na CROP_MEDIA - read only!
+        myDocument.links[i].parent.parent.pdfs[0].pdfAttributes.transparentBackground = false; // vypne transparentne pozadie v PDF - read only!*/
+    var changingAlert = false;
+    setProgWinContent ("Relinking artworks...", 0, dieSet.length);
+    if (myDocument.links[0].parent.parent.pdfs[0].pdfAttributes.pdfCrop != 1131573325) {
+        for (var i = 0; i < dieSet.length; i++) {
+            myDocument.links[i].relink(artworkFile);
+            if (Math.round(myDocument.links[i].parent.absoluteHorizontalScale) != 100) {
+                myDocument.links[i].parent.absoluteHorizontalScale = 100;
+                myDocument.links[i].parent.absoluteVerticalScale = 100;
+                myDocument.links[i].parent.parent.fillColor = app.activeDocument.swatches[2];
+                changingAlert = true;
+            };
+            pbar.value = i; progWin.update();
+        };
+        if (changingAlert == true) {
+            alert("PDF scale was changed to 100%. \n Container fill was changed to PAPER. \n Check One-up or use new template!", "Warning!", true);
+        } else {
+            alert("Old template used! \n PDF dont have crop to MEDIA \n PDF has transparent background", "Warning!", true);
+        };
+    } else {
+        for (var i = 0; i < dieSet.length; i++) {
+            myDocument.links[i].relink(artworkFile);
+            pbar.value = i; progWin.update();
+        };
+    };
+};
+function rotateArtwork (angle) { // otoci nalinkovany artwork
+    setProgWinContent ("Rotating artworks...", 0, dieSet.length);
+    for (var i = 1; i <= dieSet.length; i++) {
+        getPageItem ("bleed" + i).allGraphics[0].rotationAngle = angle;
+        pbar.value = i; progWin.update();
+    };
+};
+function rotatePunchNumbers (angle) { // otoci cisla raznikov
+    setProgWinContent ("Rotating punch numbers...", 0, dieSet.length);
+    for (var i = 1; i <= dieSet.length; i++) {
+        getPageItem ("num" + i).rotationAngle = angle + 180;
+        pbar.value = i; progWin.update();
+    };
+};
+function rotateLogos (angle) { // otoci loga
+    setProgWinContent ("Rotating logos...", 0, dieSet.length);
+    for (var i = 1; i <= dieSet.length; i++) {
+        getPageItem ("logo" + i).rotationAngle = angle;
+        pbar.value = i; progWin.update();
+    };
+};
+function clearCxVariables () { // vyprata textove premenne a znakove styly C1 az C8
+    for (var i =1 ; i <= 8; i++) {
+        myTextVariable.itemByName("C" + i).variableOptions.contents = "";
+        myCharacterStyle.itemByName("C" + i).fillColor = mySwatch[3];
+    };
+};
+function getXMPInkProperty (egInkIndex, egInkTag) { // vrati hodnotu ulozenu v tagu podla indexu egInku   
+        return myLinkXmp.getProperty("http://ns.esko-graphics.com/grinfo/1.0/", "inks[" + egInkIndex + "]/egInk:" + egInkTag);
+};
+function getXMPsmartInkProperty (smartInksIndex, smartInkTag) { // vrati hodnotu ulozenu v tagu podla indexu smartInku
+    var result;
+    if (myLinkedXmp.doesStructFieldExist("http://my.prepressSchema.namespace/", "smartInks[" + smartInksIndex + "]", "http://my.prepressSchema.namespace/smartink#", smartInkTag)) {
+        result = myLinkedXmp.getStructField("http://my.prepressSchema.namespace/", "smartInks[" + smartInksIndex + "]", "http://my.prepressSchema.namespace/smartink#", smartInkTag).toString();
+    } else { result = ""; };
+    return result;
+};
+function getXMPproperty (nameSpace, propertyName, defaultValue) { // vrati hodnotu ulozenu v tagu
+    var result;
+    if (myLinkedXmp.doesPropertyExist(nameSpace, propertyName)) {
+        result = myLinkedXmp.getProperty(nameSpace, propertyName).toString();
+    } else { result = defaultValue; };
+    return result;
+};
+function getXMPInkIndex (egInkTagName, egInkTagValue) { // vrati index egInku  podla hodnoty tagu
+    var myTagValue = "";
+    for (var i =1 ; i <= myXmpInksCount; i++) {
+        myTagValue = myLinkXmp.getProperty("http://ns.esko-graphics.com/grinfo/1.0/", "inks[" + i + "]/egInk:" + egInkTagName);
+        if (myTagValue == egInkTagValue) {break};
+    };
+    return i;
+};
+function clearArtworkVariables () { // vyprata "artwork" textove premenne a znakove styly
+    myTextVariable.itemByName("artworkID").variableOptions.contents = "";
+    myCharacterStyle.itemByName("artworkID").fillColor = mySwatch[3];
+    myTextVariable.itemByName("artworkStandard").variableOptions.contents = "";
+    myCharacterStyle.itemByName("artworkStandard").fillColor = mySwatch[3];
+    myTextVariable.itemByName("artworkName").variableOptions.contents = "";
+    myCharacterStyle.itemByName("artworkName").fillColor = mySwatch[3];
+};
+function setArtworkVariables () { // priradí "artwork" data do textových premenných a nastavý znakové styly
+        var artworkID = egInks.getKey("printingmethod", "name", "artworkID").toString();
+        var oldFirstLetter = artworkID.charAt (0);
+        var shortID = artworkID.slice (1);
+        var plateLetter = oldFirstLetter;
+        if (dh.plateWidth == 1160.00) { 
+            plateLetter = "I";
+        };
+        if (dh.plateWidth == 1220.00) {
+            plateLetter = "U";
+        };
+        if (oldFirstLetter != plateLetter) {
+            artworkID = plateLetter + shortID;
+        };
+        myTextVariable.itemByName("artworkID").variableOptions.contents = artworkID;
+        //myTextVariable.itemByName("artworkID").variableOptions.contents = egInks.getKey("printingmethod", "name", "artworkID").toString();
+        myCharacterStyle.itemByName("artworkID").fillColor = mySwatch.itemByName("Registration");
+        myTextVariable.itemByName("artworkStandard").variableOptions.contents = egInks.getKey("printingmethod", "name", "artworkStandard").toString();
+        myCharacterStyle.itemByName("artworkStandard").fillColor = mySwatch.itemByName("Registration");
+        myTextVariable.itemByName("artworkName").variableOptions.contents = egInks.getKey("printingmethod", "name", "artworkName").toString();
+        myCharacterStyle.itemByName("artworkName").fillColor = mySwatch.itemByName("Registration");
+};
+function setWbcVariables () { // priradí data z WebCentra do textových premenných a nastavý znakové styly
+    if (myLinkXmp.getProperty("http://my.wbcSchema.namespace/", "customerID").toString() != "") {
+        var artworkID = myLinkXmp.getProperty("http://my.wbcSchema.namespace/", "sapDescription").toString().substr(0, 17);
+        var oldFirstLetter = artworkID.charAt (0);
+        var shortID = artworkID.slice (1);
+        var plateLetter = oldFirstLetter;
+        if (dh.plateWidth == 1160.00) { 
+            plateLetter = "I";
+        };
+        if (dh.plateWidth == 1220.00) {
+            plateLetter = "U";
+        };
+        if (oldFirstLetter != plateLetter) {
+            artworkID = plateLetter + shortID;
+        };
+        myTextVariable.itemByName("artworkID").variableOptions.contents = artworkID;
+        myCharacterStyle.itemByName("artworkID").fillColor = mySwatch.itemByName("Registration");
+        
+        var customerID = myLinkXmp.getProperty("http://my.wbcSchema.namespace/", "customerID").toString();
+        var projectNumber = myLinkXmp.getProperty("http://my.wbcSchema.namespace/", "projectNumber").toString();
+        var artworkStandard = customerID + "-" + projectNumber;
+        myTextVariable.itemByName("artworkStandard").variableOptions.contents = artworkStandard;
+        myCharacterStyle.itemByName("artworkStandard").fillColor = mySwatch.itemByName("Registration");
+        
+        var artworkName = myLinkXmp.getProperty("http://my.wbcSchema.namespace/", "projectName").toString();
+        myTextVariable.itemByName("artworkName").variableOptions.contents = artworkName;
+        myCharacterStyle.itemByName("artworkName").fillColor = mySwatch.itemByName("Registration");
+    } else {
+        setArtworkVariables ();
+    };
+};
+function createProcessSwatch (swatchName, swatchColorValue) { // vytvorí procesný swatch
+        if (mySwatch.itemByName(swatchName) == null) {
+            myColor.add({name:swatchName, space:1129142603, colorValue:swatchColorValue});
+        };
+};
+function setDieCutPasser () { //nastaví kruhový passer
+    myXmpUsedInksCount = egInks.getInvertKey ("id", "attribute", "technical").length;
+    myXmpProcessInksCount = egInks.getKey ("id", "type", "process").length;
+    myXMPSpotInksCount = myXmpUsedInksCount - myXmpProcessInksCount;
+    if (myMixedInk.itemByName("DieCutMarks") != null) {
+            myMixedInk.itemByName("DieCutMarks").remove();
+    };
+    if (myXMPSpotInksCount > 0 &&  myXmpUsedInksCount > 1) { // podmienka pre mixed ink
+        myMixedInksList = egInks.getInvertKey ("ink", "attribute", "technical");
+        myMixedInksTintList = egInks.getInvertKey ("tint", "attribute", "technical");
+        myObjectStyle.itemByName("DieCutMarks").strokeColor = makeMixColor ("DieCutMarks", myMixedInksList, myMixedInksTintList);
+    } else if (myXMPSpotInksCount == 0 &&  myXmpProcessInksCount > 0) { //  crop ink z CMYKu
+        createProcessSwatch ("DieCutMarks", myProcessInksTintList);
+        myObjectStyle.itemByName("DieCutMarks").strokeColor = mySwatch.itemByName("DieCutMarks");
+    } else if (myXMPSpotInksCount == 1 &&  myXmpProcessInksCount == 0) { // iba 1 direktna
+        if (egInks.getInvertKey ("tint", "attribute", "technical")[0] > 0) { // ak ide o pozitiv
+            myObjectStyle.itemByName("DieCutMarks").strokeColor = egInks.getInvertKey ("swatch", "attribute", "technical")[0];
+        } else {
+            myObjectStyle.itemByName("DieCutMarks").strokeColor = mySwatch[2];
+        };
+    };
+};
+function setSxObjectStyles () { // nastavi objektove styly S1 az Sn
+    var usedNames = egInks.filter("name", "usedInksFilterCondition"); // pole mien okrem technických
+    var usedUnderPrints = egInks.filter("printingmethod", "usedInksFilterCondition"); // pole printingmethod okrem technických
+    var usedSwatches = [];
+    var subName = "";
+    var clearNames = []; // pole mien bez prípon
+    var usedTints = []; // pole použitých tint
+    var mixedName = "";
+    var usedInks = [];
+    for (var i =0 ; i < usedNames.length; i++) { // polia bez duplicity
+        if (usedNames[i].search("_1") >= 0 || usedNames[i].search("_2") >= 0) {
+            subName = usedNames[i].substr(0, usedNames[i].length - 2);
+            clearNames.push(subName);
+            usedNames[i] = subName;
+            for (var j =0 ; j < usedNames.length; j++) { // prehlada a vyhodi dvojca
+                 if (usedNames[j].search(subName + "_1") >= 0 || usedNames[j].search(subName + "_2") >= 0) {
+                     usedNames.splice(j, 1);
+                     usedUnderPrints.splice(j, 1);
+                 };
+            };
+        } else {
+            clearNames.push(usedNames[i]);
+        };
+    //$.writeln(clearNames[i] + " / " + usedUnderPrints[i]);
+    };
+    for (var i =0 ; i < clearNames.length; i++) {
+        usedInks = [];
+        usedTints = [];
+        mixedName = "Scale" + (i +1);
+        if (usedUnderPrints[i] != "unknown") { // ak ma definovany underprint
+            usedInks = egInks.getSubStr ("ink", "name", clearNames[i]).concat(egInks.getSubStr ("ink", "name", usedUnderPrints[i])); // spoji ink a underprint ink 
+        } else {
+            usedInks = egInks.getSubStr ("ink", "name", clearNames[i]);
+        };
+        for (var j = 0; j < usedInks.length; j++) { // nastavi všetky tinty na 100% 
+            usedTints.push(100); 
+        };
+        scaleStrip.add();
+        scaleStrip.lastItem().swatch = makeMixColor (mixedName, usedInks, usedTints);
+        //$.writeln(mixedName + " / " + usedInks.length + " / " + usedTints.length);
+    };
+    for (var i =0 ; i < scaleStrip.length; i++) {
+        if (myDocument.objectStyles.itemByName("Scale" + (i + 1)) == null ) {
+            myObjectStyle.add({name: ("Scale" + (i + 1))});
+        };
+        scaleStrip[i].style = myObjectStyle.itemByName("Scale" + (i + 1));
+        scaleStrip[i].style.fillColor = scaleStrip[i].swatch;
+        scaleStrip[i].style.strokeColor = mySwatch[0];
+    };
+};
+function showProps(obj, objName) { // pomocna pri ladeni - zobrazenie vycislitelnych parametrov objektu
+  var result = "";
+  for (var i in obj) {
+    if (obj.hasOwnProperty(i)) {
+        result += objName + "." + i + " = " + obj[i] + "\n";
+    };
+  };
+  return result;
+};
+function showItems(obj, note) { // pomocna pri ladeni- vypis poloziek objektu
+  for (var i in obj) {
+    $.writeln(note + " " + obj[i]);
+  };
+};
+function showAllProps() { // pomocna pri ladeni - vypis vsetkych parametrov egInks
+    for (i in egInks) { 
+        $.write(showProps( egInks[i], " egInks[" + i + "]") );
+    };
+};
+function setEgInks () { // nacita XMP data a nastaví egInks properties
+    egInks = new EgInks();
+    for (var i = 1; i <= myXmpInksCount; i++) {
+        if (getXMPInkProperty (i, "omask") == "True") {
+            myXmpInksCount--;
+        } else {
+            egInks.add();
+            with (egInks.lastItem()) { // priradí XMP data
+                name = getXMPInkProperty (i, "name");
+                //name = getXMPInkProperty (i, "egname");
+                type = getXMPInkProperty (i, "type");
+                book = getXMPInkProperty (i, "book");
+                egname = getXMPInkProperty (i, "egname");
+                //frequency = Number(getXMPInkProperty (i, "frequency"));
+                frequency = Number(getXMPsmartInkProperty (i, "coverage"));
+                angle = Number(getXMPInkProperty (i, "angle"));
+                //dotshape = getXMPInkProperty (i, "dotshape");
+                dotshape = getXMPsmartInkProperty (i, "separation");
+                r = Number(getXMPInkProperty (i, "r"));
+                g = Number(getXMPInkProperty (i, "g"));
+                b = Number(getXMPInkProperty (i, "b"));
+                attribute = getXMPInkProperty (i, "attribute");
+                //printingmethod = getXMPInkProperty (i, "printingmethod");
+                printingmethod = getXMPsmartInkProperty (i, "overprint");
+                setColors();
+                setTint();
+            };
+        };
+        //$.writeln(i + " " + egInks.lastItem().name + " / " + egInks.lastItem().type + " / " + egInks.lastItem().attribute);
+        //$.writeln(i + " " + egInks.lastItem().swatch.name + " / " + egInks.lastItem().ink.name + " / " + egInks.lastItem().tint);
+    };
+};
+function usedInksList () { // výpis použitých farieb
+    var txtVar  = egInks.getInvertKey("name", "attribute", "technical");
+    var fillColor = egInks.getInvertKey("swatch", "attribute", "technical");
+    for (var i = 0; i < txtVar.length; i++) {
+        myTextVariable.itemByName("C" + (i +1)).variableOptions.contents = txtVar[i];
+        myCharacterStyle.itemByName("C" + (i+1)).fillColor = fillColor[i];
+    };
+};
+function lowInksEater (gain) { // vyfarbi ink eater farbou s mensou spotrebou ako prah
+	var fillColor = egInks.compare("swatch", "frequency", "<=", gain);
+	if (fillColor.length == 0) {
+	    myObjectStyle.itemByName("InksEater").fillColor = mySwatch[0];
+	} else if (fillColor.length == 1) {
+	    myObjectStyle.itemByName("InksEater").fillColor = fillColor[0];
+	} else {
+	    var myMixedInksList = egInks.compare("ink", "frequency", "<=", gain);
+	    var myMixedInksTintList = egInks.compare("tint", "frequency", "<=", gain);
+        for (var i in myMixedInksTintList) {
+            myMixedInksTintList[i] = 100;
+        };
+         if (myMixedInk.itemByName("InksEater") != null) {
+            myMixedInk.itemByName("InksEater").remove();
+         };
+	    //myMixedInk.add(myMixedInksList, myMixedInksTintList, {name:"InksEater"});
+	    //myObjectStyle.itemByName("InksEater").fillColor = mySwatch.itemByName("InksEater");
+        myObjectStyle.itemByName("InksEater").fillColor = makeMixColor ("InksEater", myMixedInksList, myMixedInksTintList);
+	};
+};
+function negativeEater () { // vyfarbi neagtivne bocne pasy
+	var fillColor = egInks.filter("swatch", "negativeEaterFilterCondition");
+	if (fillColor.length == 0) {
+	    myObjectStyle.itemByName("NegativeInksEater").fillColor = mySwatch[0];
+	} else if (fillColor.length == 1) {
+	    myObjectStyle.itemByName("NegativeInksEater").fillColor = fillColor[0];
+	} else {
+	    var myMixedInksList = egInks.filter("ink", "negativeEaterFilterCondition");
+	    var myMixedInksTintList = egInks.filter("tint", "negativeEaterFilterCondition");
+        for (var i in myMixedInksTintList) {
+            myMixedInksTintList[i] = 100;
+        };
+         if (myMixedInk.itemByName("NegativeInksEater") != null) {
+            myMixedInk.itemByName("NegativeInksEater").remove();
+         };
+	    //myMixedInk.add(myMixedInksList, myMixedInksTintList, {name:"NegativeInksEater"});
+	    //myObjectStyle.itemByName("NegativeInksEater").fillColor = mySwatch.itemByName("NegativeInksEater");
+        myObjectStyle.itemByName("NegativeInksEater").fillColor = makeMixColor ("NegativeInksEater", myMixedInksList, myMixedInksTintList);
+	};
+};
+function lithoMark () { // vyfarbi litograficku znacku
+    var lithoFillColor = [];
+    if (egInks.getSubStr("swatch", "printingmethod", /LIT/i).length > 0) { // ak existuje farba oznacena LIT
+        lithoFillColor = egInks.getSubStr("swatch", "printingmethod", /LIT/i);
+    } else if (egInks.getSubStr("swatch", "name", /white/i).length > 0) { // ak existuje biela
+        lithoFillColor = egInks.getSubStr("swatch", "name", /white/i);
+    } else if (egInks.getDarkest("swatch", "positiveInksFilterCondition").length > 0) { // ak je najtmavsia farba pozitivna
+        lithoFillColor = egInks.getDarkest("swatch", "positiveInksFilterCondition");
+    } else if (egInks.getDarkest("swatch", "negativeInksFilterCondition").length > 0) { // ak je najtmavsia farba negativna
+        lithoFillColor[0] = app.activeDocument.swatches[2]; // potom = paper aby nesplyvala s negativ ink eater
+    } else {
+        lithoFillColor = egInks.getDarkest ("swatch", "usedInksFilterCondition"); // inak pouzite
+    };
+    try {
+        myObjectStyle.itemByName("LithoMark").fillColor = lithoFillColor[0]; // prva polozka zo zoznamu farieb
+    } catch (myError){
+        alert("Litho mark was not changed!");
+    };
+};
+function doubleInksCrossMark () { // vyfarbi skaly
+    var strokeColorA = egInks.filter("ink", "crossMarkACondition"); // vsetky ostatne
+    var strokeColorB = egInks.getSubStr("ink", "name", "_1"); // iba originalne
+    var strokeTintA = egInks.filter("tint", "crossMarkACondition");
+    var strokeTintB = egInks.getSubStr("tint", "name", "_1");
+    if (strokeColorA.length == 0) {
+	    myObjectStyle.itemByName("Passer").strokeColor = mySwatch[0];
+	} else if (strokeColorA.length == 1) {
+	   myObjectStyle.itemByName("Passer").strokeColor = egInks.filter("swatch", "crossMarkACondition")[0];
+       myObjectStyle.itemByName("Passer").strokeWeight = 0.25;
+	} else {
+        for (var i in strokeTintA) {
+            strokeTintA[i] = 100;
+        };
+        if (myMixedInk.itemByName("Passer") != null) {
+            myObjectStyle.itemByName("Passer").strokeColor = mySwatch[0];
+            myMixedInk.itemByName("Passer").remove();
+        };
+        //myMixedInk.add(strokeColorA, strokeTintA, {name:"Passer"});
+        //myObjectStyle.itemByName("Passer").strokeColor = mySwatch.itemByName("Passer");
+        myObjectStyle.itemByName("Passer").strokeColor = makeMixColor ("Passer", strokeColorA, strokeTintA);
+        myObjectStyle.itemByName("Passer").strokeWeight = 0.25;
+    };
+    if (strokeColorB.length == 0) {
+        myObjectStyle.itemByName("Passer_1").strokeColor = mySwatch[0];
+	} else if (strokeColorB.length == 1) {
+        myObjectStyle.itemByName("Passer_1").strokeColor = egInks.getSubStr("swatch", "name", "_1")[0];
+        myObjectStyle.itemByName("Passer_1").strokeWeight = 0.25;
+        myObjectStyle.itemByName("Passer_1").overprintStroke = true;
+	} else {
+        for (var i in strokeTintB) {
+            strokeTintB[i] = 100;
+        };
+        if (myMixedInk.itemByName("Passer_1") != null) {
+            myObjectStyle.itemByName("Passer_1").strokeColor = mySwatch[0];
+            myMixedInk.itemByName("Passer_1").remove();
+        };
+        //myMixedInk.add(strokeColorB, strokeTintB, {name:"Passer_1"});
+        //myObjectStyle.itemByName("Passer_1").strokeColor = mySwatch.itemByName("Passer_1");
+        myObjectStyle.itemByName("Passer_1").strokeColor = makeMixColor ("Passer_1", strokeColorB, strokeTintB);
+        myObjectStyle.itemByName("Passer_1").strokeWeight = 0.25;
+        myObjectStyle.itemByName("Passer_1").overprintStroke = true;
+    };
+};
+function colorScales() { // vyfarby farebnu skalu
+    var j = 1;
+    for (var i = 1; i <= 26; i++) { // priradi objektove styly
+       myDocument.pageItems.itemByName("scale" + i).applyObjectStyle(myDocument.objectStyles.itemByName("Scale" + j));
+       j++;
+       if (j > scaleStrip.length) {j = 1};
+    };
+};
+function makeMixColor (colorName, inkList, tintList) { // vytvori a vrati novu mixovanu, spot alebo CMYK farbu
+    var result = {};
+    var spotCount = 0;
+    var cmykValue = [0, 0, 0, 0];
+    var inkName = "";
+    if (inkList.length == 1 ) { // ak je zadany len jeden ink vrati swatch
+        result = egInks.getKey ("swatch", "inkName", inkList[0].name)[0];
+    } else { // inak je zadanych viac inkov
+        for (var j = 0; j < inkList.length; j++) { // spocitanie spot inkov a nastavenie CMYK hodnot
+            if (inkList[j].name.search(/process/i) < 0) { // ak sa nejedna o procesny ink
+                spotCount++;
+            } else if (inkList[j].name.search(/process cyan/i) >= 0) { // ak sa jedna o procesny cyan
+                cmykValue[0] = 100;
+            } else if (inkList[j].name.search(/process magenta/i) >= 0) { // ak sa jedna o procesny magenta
+                cmykValue[1] = 100;
+            } else if (inkList[j].name.search(/process yellow/i) >= 0) { // ak sa jedna o procesny yellow
+                cmykValue[2] = 100;
+            } else if (inkList[j].name.search(/process black/i) >= 0) { // ak sa jedna o procesny black
+                cmykValue[3] = 100;
+            };
+        };
+        if (spotCount == 0) { // ak nie je zadany ziadny spot ink
+            if (mySwatch.itemByName(colorName) != null) {
+                mySwatch.itemByName(colorName).remove();
+            };
+            createProcessSwatch (colorName, cmykValue);
+        } else { // potom je zadany aspon jeden spot ink, splnena podmienka pre mix color
+            if (myMixedInk.itemByName(colorName) != null) {
+                myMixedInk.itemByName(colorName).remove();
+            };
+            myMixedInk.add(inkList, tintList, {name:colorName}); 
+        };
+        result = mySwatch.itemByName(colorName);
+    };
+    return result;
+};
+function cropMarkLogoNumber () { // vyfarbi orezove znacky, loga a cisla raznikov
+    var posInk = egInks.getDarkest ("ink", "positiveInksFilterCondition");
+    var posDensity = 0;
+    if (posInk.length > 0) {posDensity = posInk[0].neutralDensity};
+    var negInk = egInks.getDarkest ("ink", "negativeInksFilterCondition");
+    var negDensity = 0;
+    if (negInk.length > 0) {negDensity = negInk[0].neutralDensity};
+    var deltaD = Math.abs(posDensity - negDensity); //  rozdiel denzit
+    var posDensityTreshold = (posDensity / 100 * 25); // % prah pozitivnej denzity
+	if (posDensity > negDensity && deltaD > posDensityTreshold) { /* pozitivna je tmavsia ako negativna a rozdiel je vacsi ako 50% pozitivnej */
+        var fillColor = egInks.getDarkest ("swatch", "positiveInksFilterCondition")[0];
+        setProgWinContent ("Crop Marks...", 0, 3); pbar.value = 1; progWin.update();
+            myObjectStyle.itemByName("CutMarks").strokeColor = fillColor;
+            myObjectStyle.itemByName("CutMarks").overprintStroke = true;
+        setProgWinContent ("Logos...", 0, 3); pbar.value = 2; progWin.update();
+            myObjectStyle.itemByName("Logo").fillColor = fillColor;
+            myObjectStyle.itemByName("Logo").overprintFill = true;
+        setProgWinContent ("Punch Numbers...", 0, 3); pbar.value = 3; progWin.update();
+            myParagraphStyle.itemByName("PunchNumber").fillColor = fillColor;
+            myParagraphStyle.itemByName("PunchNumber").overprintFill = true;
+	} else {
+        setProgWinContent ("Crop Marks...", 0, 3); pbar.value = 1; progWin.update();
+            myObjectStyle.itemByName("CutMarks").strokeColor = mySwatch[2];
+        setProgWinContent ("Logos...", 0, 3); pbar.value = 2; progWin.update();
+            myObjectStyle.itemByName("Logo").fillColor = mySwatch[2];
+        setProgWinContent ("Punch Numbers...", 0, 3); pbar.value = 3; progWin.update();
+            //myParagraphStyle.itemByName("PunchNumber").fillColor = mySwatch[2];
+            myParagraphStyle.itemByName("PunchNumber").fillColor = mySwatch[1];
+            myParagraphStyle.itemByName("PunchNumber").fillTint = 0;
+            myParagraphStyle.itemByName("PunchNumber").overprintFill = false;
+	};
+};
+function removeUnusedSwatch() { //vyhodi vsetky swatch a nahradi ciernou
+    var mySwatches = app.activeDocument.swatches;
+    var myLength = mySwatches.length;
+    var xName = "";
+    for (var i = 0; i < myLength; i++) {
+        xName = mySwatches[i].name
+        try {
+            mySwatches[i].remove(mySwatches[3]);
+            i--;
+            myLength--;
+            //$.writeln("vyhodene " + xName + " " + i +"/"+myLength);                
+        } catch (myError) {
+            //$.writeln("zostava " + xName + " " + i +"/"+myLength);
+        };
+    };
+};
+function createProgressWindow () { 
+    var w = new Window ("palette", "Progress Window...");
+        var message = w.add('statictext {text: "Process State...", characters: 40}');
+        var pbar = w.add ('progressbar', undefined, 0, 100);
+        pbar.preferredSize.width = 300;
+    return w;
+};
+function setProgWinContent (msg, min, max) {
+    message.text = msg;
+    pbar.minvalue = min;
+    pbar.maxvalue = max;
+};
+function loadXMPLibrary() { // load the XMPScript library
+    if ( !ExternalObject.AdobeXMPScript ){
+        try{
+            ExternalObject.AdobeXMPScript = new ExternalObject('lib:AdobeXMPScript');
+        } catch (e) {
+            alert('Unable to load the AdobeXMPScript library!'); 
+            return false;
+        };
+    };
+    return true;
+};
+function unloadXMPLibrary() { // unload the XMPScript library
+    if ( ExternalObject.AdobeXMPScript ) {
+        try {
+            ExternalObject.AdobeXMPScript.unload(); 
+            ExternalObject.AdobeXMPScript = undefined;
+        } catch (e) {
+            alert('Unable to unload the AdobeXMPScript library!');
+        };
+    };
+};
+function readXMPdata (source) {
+    if (loadXMPLibrary()) { // read xml packet
+        myLinkedFile = File(source);
+        xmpLinkedFile = new XMPFile(myLinkedFile.fsName, XMPConst.UNKNOWN, XMPConst.OPEN_FOR_READ);
+        myLinkedXmp = xmpLinkedFile.getXMP();
+        xmpLinkedFile.closeFile(XMPConst.CLOSE_UPDATE_SAFELY);
+        unloadXMPLibrary();
+    };
+};
+
+//
+// MENU
+function prePressMenu() { // Prepress Menu
+    try {
+        var prepressMenu = app.menus.item("$ID/Main").submenus.item("Prepress");
+        prepressMenu.title;
+    } catch (myError){
+    var prepressMenu = app.menus.item("$ID/Main").submenus.add("Prepress");
+    };
+// New Template MenuItem
+    var newTemplateAction = app.scriptMenuActions.add("New Template...");
+        newTemplateAction.eventListeners.add("onInvoke", function(){ newDialog(); });
+    var newTemplateMenuItem = prepressMenu.menuItems.add(newTemplateAction);
+        prepressMenu.menuSeparators.add();
+//  Edit SubMenu
+    try {
+        var editSubmenu = prepressMenu.submenus.item("Edit...").remove();
+        editSubmenu.title;
+    } catch (myError){
+        //var editSubmenu = prepressMenu.submenus.add("Edit...");
+    };
+    //editSubmenu.menuSeparators.add();
+    var editOneupAction = app.scriptMenuActions.add("Edit One-Up...");
+        editOneupAction.eventListeners.add("onInvoke", function(){ editOneUp(); });
+    //editSubmenu.menuItems.add(editOneupAction);
+    var editOneUpMenuItem = prepressMenu.menuItems.add(editOneupAction);
+// Run Prepress MenuItem
+        prepressMenu.menuSeparators.add();
+    var runSetupAction = app.scriptMenuActions.add("Run Setting-up...");
+        runSetupAction.eventListeners.add("onInvoke", function(){ prepressSetup(); });
+    var runSetupMenuItem = prepressMenu.menuItems.add(runSetupAction);
 };
 function newDialog () { // dialóg novy dokument
     var w = new Window ("dialog", "Mounting data");
@@ -1518,561 +2089,6 @@ function newDialog () { // dialóg novy dokument
         alert("Mounting document was created successfully...");
     };
 };
-function afterLoadDocument () { // nacita premenne z dokumentu
-    try {
-        myDocument = app.activeDocument;
-    } catch (myError) {
-        alert("You have not opened any document...");
-        return;
-    };
-    dh = eval(myDocument.extractLabel("dh")); // precita a vytvori premennu z dokumentu
-    dieSet = new DieSet();
-    dieSet.masterOneUp.cutDiameter = dh.cutDiameter;
-    dieSet.masterOneUp.bleedDiameter = dh.bleedDiameter;
-    dieSet.punchDieCount = dh.punchDieCount;
-    dieSet.punchHorizontalOffset = dh.dieHorizontalOffset;
-    dieSet.punchVerticalOffset = dh.dieVerticalOffset;
-    dieSet.topPunchNumber = dh.topDieNumber;
-    dieSet.punchStepCount = dh.punchStepCount;
-    dieSet.punchStepWidth = dh.punchStepWidth;
-    dieSet.fillDieSet();
-};
-function drawScales () { // nakresli skaly
-    var myLayer = myDocument.layers.add({name: "Scales"});
-    for (var i = 1; i < dh.punchStepCount; i++) {
-        addCircle (getOneUp(1, i + 1).centerX, (getOneUp(14, 1).getTop() + 3.75), 8, "scale"+i);
-        getPageItem ("scale"+i).fillColor = myDocument.swatches[3];
-    };
-};
-function relinkArtwork (artworkFile) { // prelinkuje artwork
-    /*myDocument.links[i].parent.parent.pdfs[0].pdfAttributes.pdfCrop = 1131573325; // nastavenie orezu PDF na CROP_MEDIA - read only!
-        myDocument.links[i].parent.parent.pdfs[0].pdfAttributes.transparentBackground = false; // vypne transparentne pozadie v PDF - read only!*/
-    var changingAlert = false;
-    setProgWinContent ("Relinking artworks...", 0, dieSet.length);
-    if (myDocument.links[0].parent.parent.pdfs[0].pdfAttributes.pdfCrop != 1131573325) {
-        for (var i = 0; i < dieSet.length; i++) {
-            myDocument.links[i].relink(artworkFile);
-            if (Math.round(myDocument.links[i].parent.absoluteHorizontalScale) != 100) {
-                myDocument.links[i].parent.absoluteHorizontalScale = 100;
-                myDocument.links[i].parent.absoluteVerticalScale = 100;
-                myDocument.links[i].parent.parent.fillColor = app.activeDocument.swatches[2];
-                changingAlert = true;
-            };
-            pbar.value = i; progWin.update();
-        };
-        if (changingAlert == true) {
-            alert("PDF scale was changed to 100%. \n Container fill was changed to PAPER. \n Check One-up or use new template!", "Warning!", true);
-        } else {
-            alert("Old template used! \n PDF dont have crop to MEDIA \n PDF has transparent background", "Warning!", true);
-        };
-    } else {
-        for (var i = 0; i < dieSet.length; i++) {
-            myDocument.links[i].relink(artworkFile);
-            pbar.value = i; progWin.update();
-        };
-    };
-};
-function rotateArtwork (angle) { // otoci nalinkovany artwork
-    setProgWinContent ("Rotating artworks...", 0, dieSet.length);
-    for (var i = 1; i <= dieSet.length; i++) {
-        getPageItem ("bleed" + i).allGraphics[0].rotationAngle = angle;
-        pbar.value = i; progWin.update();
-    };
-};
-function rotatePunchNumbers (angle) { // otoci cisla raznikov
-    setProgWinContent ("Rotating punch numbers...", 0, dieSet.length);
-    for (var i = 1; i <= dieSet.length; i++) {
-        getPageItem ("num" + i).rotationAngle = angle + 180;
-        pbar.value = i; progWin.update();
-    };
-};
-function rotateLogos (angle) { // otoci loga
-    setProgWinContent ("Rotating logos...", 0, dieSet.length);
-    for (var i = 1; i <= dieSet.length; i++) {
-        getPageItem ("logo" + i).rotationAngle = angle;
-        pbar.value = i; progWin.update();
-    };
-};
-function prepressSetup () { // nastavenie celeho pre-pressu
-    try {
-        myDocument = app.activeDocument;
-    } catch (myError) {
-        alert("You have not opened any document...");
-        return;
-    };
-    mySwatch = myDocument.swatches;
-    myColor = myDocument.colors;
-    myObjectStyle = myDocument.objectStyles;
-    myParagraphStyle = myDocument.paragraphStyles;
-    myCharacterStyle = myDocument.characterStyles;
-    myTextVariable = myDocument.textVariables;
-    myLinkXmp = myDocument.links[0].linkXmp;
-    myXmpInksCount = myLinkXmp.countContainer("http://ns.esko-graphics.com/grinfo/1.0/","inks");
-    myMixedInk = myDocument.mixedInks;
-    myInk = myDocument.inks;
-    myTint = myDocument.tints;
-    scaleStrip = new ScaleStrip();
-    
-    /*if (loadXMPLibrary()) { // read xml packet
-        myLinkedFile = File(app.activeDocument.links[0].filePath);
-        xmpLinkedFile = new XMPFile(myLinkedFile.fsName, XMPConst.UNKNOWN, XMPConst.OPEN_FOR_READ);
-        myLinkedXmp = xmpLinkedFile.getXMP();
-        xmpLinkedFile.closeFile(XMPConst.CLOSE_UPDATE_SAFELY);
-        unloadXMPLibrary();
-    };*/
-    readXMPdata(app.activeDocument.links[0].filePath);
-    
-    progWin.text = "Prepress Setup...";
-    progWin.show();
-    setProgWinContent ("Clean Up", 0, 1); pbar.value = 1; progWin.update();
-        removeUnusedSwatch();
-    setProgWinContent ("Esko Inks", 0, 1);  pbar.value = 1; progWin.update();
-        setEgInks();
-    setProgWinContent ("Artwork Variables", 0, 2); pbar.value = 1; progWin.update();
-        clearArtworkVariables (); pbar.value = 2; progWin.update();
-        setWbcVariables ();
-    setProgWinContent ("Used Inks", 0, 2); pbar.value = 1; progWin.update();
-        clearCxVariables (); pbar.value = 2; progWin.update();
-        usedInksList ();
-    setProgWinContent ("Die Cut Passer", 0, 1); pbar.value = 1; progWin.update();
-        setDieCutPasser ();
-    setProgWinContent ("Low Inks Eater", 0, 1); pbar.value = 1; progWin.update();
-        lowInksEater (6);
-    setProgWinContent ("Negative Inks Eater", 0, 1); pbar.value = 1; progWin.update();    
-        negativeEater ();
-    setProgWinContent ("Litho Mark", 0, 1); pbar.value = 1; progWin.update();    
-        lithoMark ();
-    setProgWinContent ("Passer Cross Marks", 0, 1); pbar.value = 1; progWin.update();    
-        doubleInksCrossMark ();
-    //setProgWinContent ("Crop Marks, Logos, Punch Numbers", 0, 1); pbar.value = 0; progWin.update();    
-        cropMarkLogoNumber ();
-    setProgWinContent ("Color Scales", 0, 2); pbar.value = 1; progWin.update();0
-        setSxObjectStyles ();pbar.value = 2; progWin.update();
-        colorScales ();
-    progWin.hide();
-    alert("Document pre-press setting-up was executed successfully...");
-
-};
-function clearCxVariables () { // vyprata textove premenne a znakove styly C1 az C8
-    for (var i =1 ; i <= 8; i++) {
-        myTextVariable.itemByName("C" + i).variableOptions.contents = "";
-        myCharacterStyle.itemByName("C" + i).fillColor = mySwatch[3];
-    };
-};
-function getXMPInkProperty (egInkIndex, egInkTag) { // vrati hodnotu ulozenu v tagu podla indexu egInku   
-        return myLinkXmp.getProperty("http://ns.esko-graphics.com/grinfo/1.0/", "inks[" + egInkIndex + "]/egInk:" + egInkTag);
-};
-function getXMPsmartInkProperty (smartInksIndex, smartInkTag) { // vrati hodnotu ulozenu v tagu podla indexu smartInku
-    var result;
-    if (myLinkedXmp.doesStructFieldExist("http://my.prepressSchema.namespace/", "smartInks[" + smartInksIndex + "]", "http://my.prepressSchema.namespace/smartink#", smartInkTag)) {
-        result = myLinkedXmp.getStructField("http://my.prepressSchema.namespace/", "smartInks[" + smartInksIndex + "]", "http://my.prepressSchema.namespace/smartink#", smartInkTag).toString();
-    } else { result = ""; };
-    return result;
-};
-function getXMPproperty (nameSpace, propertyName, defaultValue) { // vrati hodnotu ulozenu v tagu
-    var result;
-    if (myLinkedXmp.doesPropertyExist(nameSpace, propertyName)) {
-        result = myLinkedXmp.getProperty(nameSpace, propertyName).toString();
-    } else { result = defaultValue; };
-    return result;
-};
-function getXMPInkIndex (egInkTagName, egInkTagValue) { // vrati index egInku  podla hodnoty tagu
-    var myTagValue = "";
-    for (var i =1 ; i <= myXmpInksCount; i++) {
-        myTagValue = myLinkXmp.getProperty("http://ns.esko-graphics.com/grinfo/1.0/", "inks[" + i + "]/egInk:" + egInkTagName);
-        if (myTagValue == egInkTagValue) {break};
-    };
-    return i;
-};
-function clearArtworkVariables () { // vyprata "artwork" textove premenne a znakove styly
-    myTextVariable.itemByName("artworkID").variableOptions.contents = "";
-    myCharacterStyle.itemByName("artworkID").fillColor = mySwatch[3];
-    myTextVariable.itemByName("artworkStandard").variableOptions.contents = "";
-    myCharacterStyle.itemByName("artworkStandard").fillColor = mySwatch[3];
-    myTextVariable.itemByName("artworkName").variableOptions.contents = "";
-    myCharacterStyle.itemByName("artworkName").fillColor = mySwatch[3];
-};
-function setArtworkVariables () { // priradí "artwork" data do textových premenných a nastavý znakové styly
-        var artworkID = egInks.getKey("printingmethod", "name", "artworkID").toString();
-        var oldFirstLetter = artworkID.charAt (0);
-        var shortID = artworkID.slice (1);
-        var plateLetter = oldFirstLetter;
-        if (dh.plateWidth == 1160.00) { 
-            plateLetter = "I";
-        };
-        if (dh.plateWidth == 1220.00) {
-            plateLetter = "U";
-        };
-        if (oldFirstLetter != plateLetter) {
-            artworkID = plateLetter + shortID;
-        };
-        myTextVariable.itemByName("artworkID").variableOptions.contents = artworkID;
-        //myTextVariable.itemByName("artworkID").variableOptions.contents = egInks.getKey("printingmethod", "name", "artworkID").toString();
-        myCharacterStyle.itemByName("artworkID").fillColor = mySwatch.itemByName("Registration");
-        myTextVariable.itemByName("artworkStandard").variableOptions.contents = egInks.getKey("printingmethod", "name", "artworkStandard").toString();
-        myCharacterStyle.itemByName("artworkStandard").fillColor = mySwatch.itemByName("Registration");
-        myTextVariable.itemByName("artworkName").variableOptions.contents = egInks.getKey("printingmethod", "name", "artworkName").toString();
-        myCharacterStyle.itemByName("artworkName").fillColor = mySwatch.itemByName("Registration");
-};
-function setWbcVariables () { // priradí data z WebCentra do textových premenných a nastavý znakové styly
-    if (myLinkXmp.getProperty("http://my.wbcSchema.namespace/", "customerID").toString() != "") {
-        var artworkID = myLinkXmp.getProperty("http://my.wbcSchema.namespace/", "sapDescription").toString().substr(0, 17);
-        var oldFirstLetter = artworkID.charAt (0);
-        var shortID = artworkID.slice (1);
-        var plateLetter = oldFirstLetter;
-        if (dh.plateWidth == 1160.00) { 
-            plateLetter = "I";
-        };
-        if (dh.plateWidth == 1220.00) {
-            plateLetter = "U";
-        };
-        if (oldFirstLetter != plateLetter) {
-            artworkID = plateLetter + shortID;
-        };
-        myTextVariable.itemByName("artworkID").variableOptions.contents = artworkID;
-        myCharacterStyle.itemByName("artworkID").fillColor = mySwatch.itemByName("Registration");
-        
-        var customerID = myLinkXmp.getProperty("http://my.wbcSchema.namespace/", "customerID").toString();
-        var projectNumber = myLinkXmp.getProperty("http://my.wbcSchema.namespace/", "projectNumber").toString();
-        var artworkStandard = customerID + "-" + projectNumber;
-        myTextVariable.itemByName("artworkStandard").variableOptions.contents = artworkStandard;
-        myCharacterStyle.itemByName("artworkStandard").fillColor = mySwatch.itemByName("Registration");
-        
-        var artworkName = myLinkXmp.getProperty("http://my.wbcSchema.namespace/", "projectName").toString();
-        myTextVariable.itemByName("artworkName").variableOptions.contents = artworkName;
-        myCharacterStyle.itemByName("artworkName").fillColor = mySwatch.itemByName("Registration");
-    } else {
-        setArtworkVariables ();
-    };
-};
-function createProcessSwatch (swatchName, swatchColorValue) { // vytvorí procesný swatch
-        if (mySwatch.itemByName(swatchName) == null) {
-            myColor.add({name:swatchName, space:1129142603, colorValue:swatchColorValue});
-        };
-};
-function setDieCutPasser () { //nastaví kruhový passer
-    myXmpUsedInksCount = egInks.getInvertKey ("id", "attribute", "technical").length;
-    myXmpProcessInksCount = egInks.getKey ("id", "type", "process").length;
-    myXMPSpotInksCount = myXmpUsedInksCount - myXmpProcessInksCount;
-    if (myMixedInk.itemByName("DieCutMarks") != null) {
-            myMixedInk.itemByName("DieCutMarks").remove();
-    };
-    if (myXMPSpotInksCount > 0 &&  myXmpUsedInksCount > 1) { // podmienka pre mixed ink
-        myMixedInksList = egInks.getInvertKey ("ink", "attribute", "technical");
-        myMixedInksTintList = egInks.getInvertKey ("tint", "attribute", "technical");
-        myObjectStyle.itemByName("DieCutMarks").strokeColor = makeMixColor ("DieCutMarks", myMixedInksList, myMixedInksTintList);
-    } else if (myXMPSpotInksCount == 0 &&  myXmpProcessInksCount > 0) { //  crop ink z CMYKu
-        createProcessSwatch ("DieCutMarks", myProcessInksTintList);
-        myObjectStyle.itemByName("DieCutMarks").strokeColor = mySwatch.itemByName("DieCutMarks");
-    } else if (myXMPSpotInksCount == 1 &&  myXmpProcessInksCount == 0) { // iba 1 direktna
-        if (egInks.getInvertKey ("tint", "attribute", "technical")[0] > 0) { // ak ide o pozitiv
-            myObjectStyle.itemByName("DieCutMarks").strokeColor = egInks.getInvertKey ("swatch", "attribute", "technical")[0];
-        } else {
-            myObjectStyle.itemByName("DieCutMarks").strokeColor = mySwatch[2];
-        };
-    };
-};
-function setSxObjectStyles () { // nastavi objektove styly S1 az Sn
-    var usedNames = egInks.filter("name", "usedInksFilterCondition"); // pole mien okrem technických
-    var usedUnderPrints = egInks.filter("printingmethod", "usedInksFilterCondition"); // pole printingmethod okrem technických
-    var usedSwatches = [];
-    var subName = "";
-    var clearNames = []; // pole mien bez prípon
-    var usedTints = []; // pole použitých tint
-    var mixedName = "";
-    var usedInks = [];
-    for (var i =0 ; i < usedNames.length; i++) { // polia bez duplicity
-        if (usedNames[i].search("_1") >= 0 || usedNames[i].search("_2") >= 0) {
-            subName = usedNames[i].substr(0, usedNames[i].length - 2);
-            clearNames.push(subName);
-            usedNames[i] = subName;
-            for (var j =0 ; j < usedNames.length; j++) { // prehlada a vyhodi dvojca
-                 if (usedNames[j].search(subName + "_1") >= 0 || usedNames[j].search(subName + "_2") >= 0) {
-                     usedNames.splice(j, 1);
-                     usedUnderPrints.splice(j, 1);
-                 };
-            };
-        } else {
-            clearNames.push(usedNames[i]);
-        };
-    //$.writeln(clearNames[i] + " / " + usedUnderPrints[i]);
-    };
-    for (var i =0 ; i < clearNames.length; i++) {
-        usedInks = [];
-        usedTints = [];
-        mixedName = "Scale" + (i +1);
-        if (usedUnderPrints[i] != "unknown") { // ak ma definovany underprint
-            usedInks = egInks.getSubStr ("ink", "name", clearNames[i]).concat(egInks.getSubStr ("ink", "name", usedUnderPrints[i])); // spoji ink a underprint ink 
-        } else {
-            usedInks = egInks.getSubStr ("ink", "name", clearNames[i]);
-        };
-        for (var j = 0; j < usedInks.length; j++) { // nastavi všetky tinty na 100% 
-            usedTints.push(100); 
-        };
-        scaleStrip.add();
-        scaleStrip.lastItem().swatch = makeMixColor (mixedName, usedInks, usedTints);
-        //$.writeln(mixedName + " / " + usedInks.length + " / " + usedTints.length);
-    };
-    for (var i =0 ; i < scaleStrip.length; i++) {
-        if (myDocument.objectStyles.itemByName("Scale" + (i + 1)) == null ) {
-            myObjectStyle.add({name: ("Scale" + (i + 1))});
-        };
-        scaleStrip[i].style = myObjectStyle.itemByName("Scale" + (i + 1));
-        scaleStrip[i].style.fillColor = scaleStrip[i].swatch;
-        scaleStrip[i].style.strokeColor = mySwatch[0];
-    };
-};
-function showProps(obj, objName) { // pomocna pri ladeni - zobrazenie vycislitelnych parametrov objektu
-  var result = "";
-  for (var i in obj) {
-    if (obj.hasOwnProperty(i)) {
-        result += objName + "." + i + " = " + obj[i] + "\n";
-    };
-  };
-  return result;
-};
-function showItems(obj, note) { // pomocna pri ladeni- vypis poloziek objektu
-  for (var i in obj) {
-    $.writeln(note + " " + obj[i]);
-  };
-};
-function showAllProps() { // pomocna pri ladeni - vypis vsetkych parametrov egInks
-    for (i in egInks) { 
-        $.write(showProps( egInks[i], " egInks[" + i + "]") );
-    };
-};
-function setEgInks () { // nacita XMP data a nastaví egInks properties
-    egInks = new EgInks();
-    for (var i = 1; i <= myXmpInksCount; i++) {
-        if (getXMPInkProperty (i, "omask") == "True") {
-            myXmpInksCount--;
-        } else {
-            egInks.add();
-            with (egInks.lastItem()) { // priradí XMP data
-                name = getXMPInkProperty (i, "name");
-                //name = getXMPInkProperty (i, "egname");
-                type = getXMPInkProperty (i, "type");
-                book = getXMPInkProperty (i, "book");
-                egname = getXMPInkProperty (i, "egname");
-                //frequency = Number(getXMPInkProperty (i, "frequency"));
-                frequency = Number(getXMPsmartInkProperty (i, "coverage"));
-                angle = Number(getXMPInkProperty (i, "angle"));
-                //dotshape = getXMPInkProperty (i, "dotshape");
-                dotshape = getXMPsmartInkProperty (i, "separation");
-                r = Number(getXMPInkProperty (i, "r"));
-                g = Number(getXMPInkProperty (i, "g"));
-                b = Number(getXMPInkProperty (i, "b"));
-                attribute = getXMPInkProperty (i, "attribute");
-                //printingmethod = getXMPInkProperty (i, "printingmethod");
-                printingmethod = getXMPsmartInkProperty (i, "overprint");
-                setColors();
-                setTint();
-            };
-        };
-        //$.writeln(i + " " + egInks.lastItem().name + " / " + egInks.lastItem().type + " / " + egInks.lastItem().attribute);
-        //$.writeln(i + " " + egInks.lastItem().swatch.name + " / " + egInks.lastItem().ink.name + " / " + egInks.lastItem().tint);
-    };
-};
-function usedInksList () { // výpis použitých farieb
-    var txtVar  = egInks.getInvertKey("name", "attribute", "technical");
-    var fillColor = egInks.getInvertKey("swatch", "attribute", "technical");
-    for (var i = 0; i < txtVar.length; i++) {
-        myTextVariable.itemByName("C" + (i +1)).variableOptions.contents = txtVar[i];
-        myCharacterStyle.itemByName("C" + (i+1)).fillColor = fillColor[i];
-    };
-};
-function lowInksEater (gain) { // vyfarbi ink eater farbou s mensou spotrebou ako prah
-	var fillColor = egInks.compare("swatch", "frequency", "<=", gain);
-	if (fillColor.length == 0) {
-	    myObjectStyle.itemByName("InksEater").fillColor = mySwatch[0];
-	} else if (fillColor.length == 1) {
-	    myObjectStyle.itemByName("InksEater").fillColor = fillColor[0];
-	} else {
-	    var myMixedInksList = egInks.compare("ink", "frequency", "<=", gain);
-	    var myMixedInksTintList = egInks.compare("tint", "frequency", "<=", gain);
-        for (var i in myMixedInksTintList) {
-            myMixedInksTintList[i] = 100;
-        };
-         if (myMixedInk.itemByName("InksEater") != null) {
-            myMixedInk.itemByName("InksEater").remove();
-         };
-	    //myMixedInk.add(myMixedInksList, myMixedInksTintList, {name:"InksEater"});
-	    //myObjectStyle.itemByName("InksEater").fillColor = mySwatch.itemByName("InksEater");
-        myObjectStyle.itemByName("InksEater").fillColor = makeMixColor ("InksEater", myMixedInksList, myMixedInksTintList);
-	};
-};
-function negativeEater () { // vyfarbi neagtivne bocne pasy
-	var fillColor = egInks.filter("swatch", "negativeEaterFilterCondition");
-	if (fillColor.length == 0) {
-	    myObjectStyle.itemByName("NegativeInksEater").fillColor = mySwatch[0];
-	} else if (fillColor.length == 1) {
-	    myObjectStyle.itemByName("NegativeInksEater").fillColor = fillColor[0];
-	} else {
-	    var myMixedInksList = egInks.filter("ink", "negativeEaterFilterCondition");
-	    var myMixedInksTintList = egInks.filter("tint", "negativeEaterFilterCondition");
-        for (var i in myMixedInksTintList) {
-            myMixedInksTintList[i] = 100;
-        };
-         if (myMixedInk.itemByName("NegativeInksEater") != null) {
-            myMixedInk.itemByName("NegativeInksEater").remove();
-         };
-	    //myMixedInk.add(myMixedInksList, myMixedInksTintList, {name:"NegativeInksEater"});
-	    //myObjectStyle.itemByName("NegativeInksEater").fillColor = mySwatch.itemByName("NegativeInksEater");
-        myObjectStyle.itemByName("NegativeInksEater").fillColor = makeMixColor ("NegativeInksEater", myMixedInksList, myMixedInksTintList);
-	};
-};
-function lithoMark () { // vyfarbi litograficku znacku
-    var lithoFillColor = [];
-    if (egInks.getSubStr("swatch", "printingmethod", /LIT/i).length > 0) { // ak existuje farba oznacena LIT
-        lithoFillColor = egInks.getSubStr("swatch", "printingmethod", /LIT/i);
-    } else if (egInks.getSubStr("swatch", "name", /white/i).length > 0) { // ak existuje biela
-        lithoFillColor = egInks.getSubStr("swatch", "name", /white/i);
-    } else if (egInks.getDarkest("swatch", "positiveInksFilterCondition").length > 0) { // ak je najtmavsia farba pozitivna
-        lithoFillColor = egInks.getDarkest("swatch", "positiveInksFilterCondition");
-    } else if (egInks.getDarkest("swatch", "negativeInksFilterCondition").length > 0) { // ak je najtmavsia farba negativna
-        lithoFillColor[0] = app.activeDocument.swatches[2]; // potom = paper aby nesplyvala s negativ ink eater
-    } else {
-        lithoFillColor = egInks.getDarkest ("swatch", "usedInksFilterCondition"); // inak pouzite
-    };
-    try {
-        myObjectStyle.itemByName("LithoMark").fillColor = lithoFillColor[0]; // prva polozka zo zoznamu farieb
-    } catch (myError){
-        alert("Litho mark was not changed!");
-    };
-};
-function doubleInksCrossMark () { // vyfarbi skaly
-    var strokeColorA = egInks.filter("ink", "crossMarkACondition"); // vsetky ostatne
-    var strokeColorB = egInks.getSubStr("ink", "name", "_1"); // iba originalne
-    var strokeTintA = egInks.filter("tint", "crossMarkACondition");
-    var strokeTintB = egInks.getSubStr("tint", "name", "_1");
-    if (strokeColorA.length == 0) {
-	    myObjectStyle.itemByName("Passer").strokeColor = mySwatch[0];
-	} else if (strokeColorA.length == 1) {
-	   myObjectStyle.itemByName("Passer").strokeColor = egInks.filter("swatch", "crossMarkACondition")[0];
-       myObjectStyle.itemByName("Passer").strokeWeight = 0.25;
-	} else {
-        for (var i in strokeTintA) {
-            strokeTintA[i] = 100;
-        };
-        if (myMixedInk.itemByName("Passer") != null) {
-            myObjectStyle.itemByName("Passer").strokeColor = mySwatch[0];
-            myMixedInk.itemByName("Passer").remove();
-        };
-        //myMixedInk.add(strokeColorA, strokeTintA, {name:"Passer"});
-        //myObjectStyle.itemByName("Passer").strokeColor = mySwatch.itemByName("Passer");
-        myObjectStyle.itemByName("Passer").strokeColor = makeMixColor ("Passer", strokeColorA, strokeTintA);
-        myObjectStyle.itemByName("Passer").strokeWeight = 0.25;
-    };
-    if (strokeColorB.length == 0) {
-        myObjectStyle.itemByName("Passer_1").strokeColor = mySwatch[0];
-	} else if (strokeColorB.length == 1) {
-        myObjectStyle.itemByName("Passer_1").strokeColor = egInks.getSubStr("swatch", "name", "_1")[0];
-        myObjectStyle.itemByName("Passer_1").strokeWeight = 0.25;
-        myObjectStyle.itemByName("Passer_1").overprintStroke = true;
-	} else {
-        for (var i in strokeTintB) {
-            strokeTintB[i] = 100;
-        };
-        if (myMixedInk.itemByName("Passer_1") != null) {
-            myObjectStyle.itemByName("Passer_1").strokeColor = mySwatch[0];
-            myMixedInk.itemByName("Passer_1").remove();
-        };
-        //myMixedInk.add(strokeColorB, strokeTintB, {name:"Passer_1"});
-        //myObjectStyle.itemByName("Passer_1").strokeColor = mySwatch.itemByName("Passer_1");
-        myObjectStyle.itemByName("Passer_1").strokeColor = makeMixColor ("Passer_1", strokeColorB, strokeTintB);
-        myObjectStyle.itemByName("Passer_1").strokeWeight = 0.25;
-        myObjectStyle.itemByName("Passer_1").overprintStroke = true;
-    };
-};
-function colorScales() { // vyfarby farebnu skalu
-    var j = 1;
-    for (var i = 1; i <= 26; i++) { // priradi objektove styly
-       myDocument.pageItems.itemByName("scale" + i).applyObjectStyle(myDocument.objectStyles.itemByName("Scale" + j));
-       j++;
-       if (j > scaleStrip.length) {j = 1};
-    };
-};
-function makeMixColor (colorName, inkList, tintList) { // vytvori a vrati novu mixovanu, spot alebo CMYK farbu
-    var result = {};
-    var spotCount = 0;
-    var cmykValue = [0, 0, 0, 0];
-    var inkName = "";
-    if (inkList.length == 1 ) { // ak je zadany len jeden ink vrati swatch
-        result = egInks.getKey ("swatch", "inkName", inkList[0].name)[0];
-    } else { // inak je zadanych viac inkov
-        for (var j = 0; j < inkList.length; j++) { // spocitanie spot inkov a nastavenie CMYK hodnot
-            if (inkList[j].name.search(/process/i) < 0) { // ak sa nejedna o procesny ink
-                spotCount++;
-            } else if (inkList[j].name.search(/process cyan/i) >= 0) { // ak sa jedna o procesny cyan
-                cmykValue[0] = 100;
-            } else if (inkList[j].name.search(/process magenta/i) >= 0) { // ak sa jedna o procesny magenta
-                cmykValue[1] = 100;
-            } else if (inkList[j].name.search(/process yellow/i) >= 0) { // ak sa jedna o procesny yellow
-                cmykValue[2] = 100;
-            } else if (inkList[j].name.search(/process black/i) >= 0) { // ak sa jedna o procesny black
-                cmykValue[3] = 100;
-            };
-        };
-        if (spotCount == 0) { // ak nie je zadany ziadny spot ink
-            if (mySwatch.itemByName(colorName) != null) {
-                mySwatch.itemByName(colorName).remove();
-            };
-            createProcessSwatch (colorName, cmykValue);
-        } else { // potom je zadany aspon jeden spot ink, splnena podmienka pre mix color
-            if (myMixedInk.itemByName(colorName) != null) {
-                myMixedInk.itemByName(colorName).remove();
-            };
-            myMixedInk.add(inkList, tintList, {name:colorName}); 
-        };
-        result = mySwatch.itemByName(colorName);
-    };
-    return result;
-};
-function cropMarkLogoNumber () { // vyfarbi orezove znacky, loga a cisla raznikov
-    var posInk = egInks.getDarkest ("ink", "positiveInksFilterCondition");
-    var posDensity = 0;
-    if (posInk.length > 0) {posDensity = posInk[0].neutralDensity};
-    var negInk = egInks.getDarkest ("ink", "negativeInksFilterCondition");
-    var negDensity = 0;
-    if (negInk.length > 0) {negDensity = negInk[0].neutralDensity};
-    var deltaD = Math.abs(posDensity - negDensity); //  rozdiel denzit
-    var posDensityTreshold = (posDensity / 100 * 25); // % prah pozitivnej denzity
-	if (posDensity > negDensity && deltaD > posDensityTreshold) { /* pozitivna je tmavsia ako negativna a rozdiel je vacsi ako 50% pozitivnej */
-        var fillColor = egInks.getDarkest ("swatch", "positiveInksFilterCondition")[0];
-        setProgWinContent ("Crop Marks...", 0, 3); pbar.value = 1; progWin.update();
-            myObjectStyle.itemByName("CutMarks").strokeColor = fillColor;
-            myObjectStyle.itemByName("CutMarks").overprintStroke = true;
-        setProgWinContent ("Logos...", 0, 3); pbar.value = 2; progWin.update();
-            myObjectStyle.itemByName("Logo").fillColor = fillColor;
-            myObjectStyle.itemByName("Logo").overprintFill = true;
-        setProgWinContent ("Punch Numbers...", 0, 3); pbar.value = 3; progWin.update();
-            myParagraphStyle.itemByName("PunchNumber").fillColor = fillColor;
-            myParagraphStyle.itemByName("PunchNumber").overprintFill = true;
-	} else {
-        setProgWinContent ("Crop Marks...", 0, 3); pbar.value = 1; progWin.update();
-            myObjectStyle.itemByName("CutMarks").strokeColor = mySwatch[2];
-        setProgWinContent ("Logos...", 0, 3); pbar.value = 2; progWin.update();
-            myObjectStyle.itemByName("Logo").fillColor = mySwatch[2];
-        setProgWinContent ("Punch Numbers...", 0, 3); pbar.value = 3; progWin.update();
-            myParagraphStyle.itemByName("PunchNumber").fillColor = mySwatch[2];
-	};
-};
-function removeUnusedSwatch() { //vyhodi vsetky swatch a nahradi ciernou
-    var mySwatches = app.activeDocument.swatches;
-    var myLength = mySwatches.length;
-    var xName = "";
-    for (var i = 0; i < myLength; i++) {
-        xName = mySwatches[i].name
-        try {
-            mySwatches[i].remove(mySwatches[3]);
-            i--;
-            myLength--;
-            //$.writeln("vyhodene " + xName + " " + i +"/"+myLength);                
-        } catch (myError) {
-            //$.writeln("zostava " + xName + " " + i +"/"+myLength);
-        };
-    };
-};
 function editOneUp () {
     app.activeWindow.transformReferencePoint = AnchorPoint.CENTER_ANCHOR; // nastavi referencny bod na stred
     try {
@@ -2408,76 +2424,63 @@ function editOneUp () {
         alert("One-Up editing was successfully...");
     };
 };
-function prePressMenu() { // Prepress Menu
+function prepressSetup () { // nastavenie celeho pre-pressu
     try {
-        var prepressMenu = app.menus.item("$ID/Main").submenus.item("Prepress");
-        prepressMenu.title;
-    } catch (myError){
-    var prepressMenu = app.menus.item("$ID/Main").submenus.add("Prepress");
+        myDocument = app.activeDocument;
+    } catch (myError) {
+        alert("You have not opened any document...");
+        return;
     };
-// New Template MenuItem
-    var newTemplateAction = app.scriptMenuActions.add("New Template...");
-        newTemplateAction.eventListeners.add("onInvoke", function(){ newDialog(); });
-    var newTemplateMenuItem = prepressMenu.menuItems.add(newTemplateAction);
-        prepressMenu.menuSeparators.add();
-//  Edit SubMenu
-    try {
-        var editSubmenu = prepressMenu.submenus.item("Edit...").remove();
-        editSubmenu.title;
-    } catch (myError){
-        //var editSubmenu = prepressMenu.submenus.add("Edit...");
-    };
-    //editSubmenu.menuSeparators.add();
-    var editOneupAction = app.scriptMenuActions.add("Edit One-Up...");
-        editOneupAction.eventListeners.add("onInvoke", function(){ editOneUp(); });
-    //editSubmenu.menuItems.add(editOneupAction);
-    var editOneUpMenuItem = prepressMenu.menuItems.add(editOneupAction);
-// Run Prepress MenuItem
-        prepressMenu.menuSeparators.add();
-    var runSetupAction = app.scriptMenuActions.add("Run Setting-up...");
-        runSetupAction.eventListeners.add("onInvoke", function(){ prepressSetup(); });
-    var runSetupMenuItem = prepressMenu.menuItems.add(runSetupAction);
-};
-function createProgressWindow () { 
-    var w = new Window ("palette", "Progress Window...");
-        var message = w.add('statictext {text: "Process State...", characters: 40}');
-        var pbar = w.add ('progressbar', undefined, 0, 100);
-        pbar.preferredSize.width = 300;
-    return w;
-};
-function setProgWinContent (msg, min, max) {
-    message.text = msg;
-    pbar.minvalue = min;
-    pbar.maxvalue = max;
-};
-function loadXMPLibrary() { // load the XMPScript library
-    if ( !ExternalObject.AdobeXMPScript ){
-        try{
-            ExternalObject.AdobeXMPScript = new ExternalObject('lib:AdobeXMPScript');
-        } catch (e) {
-            alert('Unable to load the AdobeXMPScript library!'); 
-            return false;
-        };
-    };
-    return true;
-};
-function unloadXMPLibrary() { // unload the XMPScript library
-    if ( ExternalObject.AdobeXMPScript ) {
-        try {
-            ExternalObject.AdobeXMPScript.unload(); 
-            ExternalObject.AdobeXMPScript = undefined;
-        } catch (e) {
-            alert('Unable to unload the AdobeXMPScript library!');
-        };
-    };
-};
-function readXMPdata (source) {
-    if (loadXMPLibrary()) { // read xml packet
-        myLinkedFile = File(source);
+    mySwatch = myDocument.swatches;
+    myColor = myDocument.colors;
+    myObjectStyle = myDocument.objectStyles;
+    myParagraphStyle = myDocument.paragraphStyles;
+    myCharacterStyle = myDocument.characterStyles;
+    myTextVariable = myDocument.textVariables;
+    myLinkXmp = myDocument.links[0].linkXmp;
+    myXmpInksCount = myLinkXmp.countContainer("http://ns.esko-graphics.com/grinfo/1.0/","inks");
+    myMixedInk = myDocument.mixedInks;
+    myInk = myDocument.inks;
+    myTint = myDocument.tints;
+    scaleStrip = new ScaleStrip();
+    
+    /*if (loadXMPLibrary()) { // read xml packet
+        myLinkedFile = File(app.activeDocument.links[0].filePath);
         xmpLinkedFile = new XMPFile(myLinkedFile.fsName, XMPConst.UNKNOWN, XMPConst.OPEN_FOR_READ);
         myLinkedXmp = xmpLinkedFile.getXMP();
         xmpLinkedFile.closeFile(XMPConst.CLOSE_UPDATE_SAFELY);
         unloadXMPLibrary();
-    };
-};
+    };*/
+    readXMPdata(app.activeDocument.links[0].filePath);
+    
+    progWin.text = "Prepress Setup...";
+    progWin.show();
+    setProgWinContent ("Clean Up", 0, 1); pbar.value = 1; progWin.update();
+        removeUnusedSwatch();
+    setProgWinContent ("Esko Inks", 0, 1);  pbar.value = 1; progWin.update();
+        setEgInks();
+    setProgWinContent ("Artwork Variables", 0, 2); pbar.value = 1; progWin.update();
+        clearArtworkVariables (); pbar.value = 2; progWin.update();
+        setWbcVariables ();
+    setProgWinContent ("Used Inks", 0, 2); pbar.value = 1; progWin.update();
+        clearCxVariables (); pbar.value = 2; progWin.update();
+        usedInksList ();
+    setProgWinContent ("Die Cut Passer", 0, 1); pbar.value = 1; progWin.update();
+        setDieCutPasser ();
+    setProgWinContent ("Low Inks Eater", 0, 1); pbar.value = 1; progWin.update();
+        lowInksEater (6);
+    setProgWinContent ("Negative Inks Eater", 0, 1); pbar.value = 1; progWin.update();    
+        negativeEater ();
+    setProgWinContent ("Litho Mark", 0, 1); pbar.value = 1; progWin.update();    
+        lithoMark ();
+    setProgWinContent ("Passer Cross Marks", 0, 1); pbar.value = 1; progWin.update();    
+        doubleInksCrossMark ();
+    //setProgWinContent ("Crop Marks, Logos, Punch Numbers", 0, 1); pbar.value = 0; progWin.update();    
+        cropMarkLogoNumber ();
+    setProgWinContent ("Color Scales", 0, 2); pbar.value = 1; progWin.update();0
+        setSxObjectStyles ();pbar.value = 2; progWin.update();
+        colorScales ();
+    progWin.hide();
+    alert("Document pre-press setting-up was executed successfully...");
 
+};
