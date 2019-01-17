@@ -1525,7 +1525,6 @@ function cropMarkLogoNumber () { // vyfarbi orezove znacky, loga a cisla razniko
         setProgWinContent ("Logos...", 0, 3); pbar.value = 2; progWin.update();
             myObjectStyle.itemByName("Logo").fillColor = mySwatch[2];
         setProgWinContent ("Punch Numbers...", 0, 3); pbar.value = 3; progWin.update();
-            //myParagraphStyle.itemByName("PunchNumber").fillColor = mySwatch[2];
             myParagraphStyle.itemByName("PunchNumber").fillColor = mySwatch[1];
             myParagraphStyle.itemByName("PunchNumber").fillTint = 0;
             myParagraphStyle.itemByName("PunchNumber").overprintFill = false;
