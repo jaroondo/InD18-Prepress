@@ -1612,13 +1612,19 @@ function prePressMenu() { // Prepress Menu
     };
     //editSubmenu.menuSeparators.add();
     var editOneupAction = app.scriptMenuActions.add("Edit One-Up...");
-        editOneupAction.eventListeners.add("onInvoke", function(){ editOneUp(); });
+        editOneupAction.eventListeners.add("onInvoke", function() { 
+            editOneUp();
+            alert("One-Up editing was successfully...");
+        });
     //editSubmenu.menuItems.add(editOneupAction);
     var editOneUpMenuItem = prepressMenu.menuItems.add(editOneupAction);
 // Run Prepress MenuItem
         prepressMenu.menuSeparators.add();
     var runSetupAction = app.scriptMenuActions.add("Run Setting-up...");
-        runSetupAction.eventListeners.add("onInvoke", function(){ prepressSetup(); });
+        runSetupAction.eventListeners.add("onInvoke", function() { 
+           prepressSetup();
+           alert("Document pre-press setting-up was executed successfully...");
+        });
     var runSetupMenuItem = prepressMenu.menuItems.add(runSetupAction);
 };
 function newDialog () { // dialóg novy dokument
@@ -2420,7 +2426,7 @@ function editOneUp () {
         myDocument.insertLabel("dieSet", dieSet.toSource()); // vlozi objekt vysek do dokumentu        
         myDocument.insertLabel("dh", dh.toSource()); // vlozi objekt data z dialogu do dokumentu
         progWin.hide();
-        alert("One-Up editing was successfully...");
+        //alert("One-Up editing was successfully...");
     };
 };
 function prepressSetup () { // nastavenie celeho pre-pressu
@@ -2480,6 +2486,5 @@ function prepressSetup () { // nastavenie celeho pre-pressu
         setSxObjectStyles ();pbar.value = 2; progWin.update();
         colorScales ();
     progWin.hide();
-    alert("Document pre-press setting-up was executed successfully...");
-
+    //alert("Document pre-press setting-up was executed successfully...");
 };
