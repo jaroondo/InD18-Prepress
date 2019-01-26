@@ -1588,7 +1588,6 @@ function readXMPdata (source) {
         unloadXMPLibrary();
     };
 };
-
 //
 // MENU
 function prePressMenu() { // Prepress Menu
@@ -2488,3 +2487,33 @@ function prepressSetup () { // nastavenie celeho pre-pressu
     progWin.hide();
     //alert("Document pre-press setting-up was executed successfully...");
 };
+function jobWorkflow () {
+    var w = new Window ("dialog", "Job Workflow...");
+        w.alignChildren = "left";
+        var p1 = w.add ('panel {text: "", borderstyle: "gray", alignChildren: "fill", alignment: "fill"}');
+            p1.g1 = p1.add("group");
+                var editCheckBox = p1.g1.add("checkbox");
+                    editCheckBox.value = true;
+                var editCheckBoxStatictext = p1.g1.add('statictext {text: "Edit One-Up", justify: "left"}');
+           p1.g2 = p1.add("group");     
+                var prepressCheckBox = p1.g2.add("checkbox");
+                    prepressCheckBox.value = true;
+                var prepressCheckBoxStatictext = p1.g2.add('statictext {text: "Prepress Set-Up", justify: "left"}');
+            
+        var buttonGroup = w.add ('group {alignment: "right"}');
+            buttonGroup.add ("button", undefined, "OK");
+            buttonGroup.add ("button", undefined, "Cancel");
+    
+    if (w.show () == 1) {
+        if (editCheckBox.value = true) {
+            //editOneUp ();
+        };
+        if (prepressCheckBox.value = true) {
+            //prepressSetup ();
+        };
+        alert('Job worklow finished successfully...');
+    };
+};
+//
+// TESTING
+jobWorkflow ();
