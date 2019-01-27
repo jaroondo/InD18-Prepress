@@ -1588,6 +1588,18 @@ function readXMPdata (source) {
         unloadXMPLibrary();
     };
 };
+function saveJobAs () {
+    try {
+        myDocument = app.activeDocument;
+    } catch (myError) {
+        alert("You have not opened any document...");
+        return;
+    };
+    var dh = eval(myDocument.extractLabel("dh"));
+    
+    $.writeln(dh.artworkFile);
+    alert("Job saved successfully...");
+};
 //
 // MENU
 function prePressMenu() { // Prepress Menu
@@ -1625,6 +1637,13 @@ function prePressMenu() { // Prepress Menu
            alert("Document pre-press setting-up was executed successfully...");
         });
     var runSetupMenuItem = prepressMenu.menuItems.add(runSetupAction);
+ // Job Workflow MenuItem
+        prepressMenu.menuSeparators.add();
+    var runJobAction = app.scriptMenuActions.add("Job Workflow...");
+        runJobAction.eventListeners.add("onInvoke", function() { 
+           jobWorkflow ();
+        });
+    var runJobMenuItem = prepressMenu.menuItems.add(runJobAction);   
 };
 function newDialog () { // dialóg novy dokument
     var w = new Window ("dialog", "Mounting data");
@@ -2488,6 +2507,12 @@ function prepressSetup () { // nastavenie celeho pre-pressu
     //alert("Document pre-press setting-up was executed successfully...");
 };
 function jobWorkflow () {
+    try {
+        myDocument = app.activeDocument;
+    } catch (myError) {
+        alert("You have not opened any document...");
+        return;
+    };
     var w = new Window ("dialog", "Job Workflow...");
         w.alignChildren = "left";
         var p1 = w.add ('panel {text: "", borderstyle: "gray", alignChildren: "fill", alignment: "fill"}');
@@ -2495,25 +2520,32 @@ function jobWorkflow () {
                 var editCheckBox = p1.g1.add("checkbox");
                     editCheckBox.value = true;
                 var editCheckBoxStatictext = p1.g1.add('statictext {text: "Edit One-Up", justify: "left"}');
-           p1.g2 = p1.add("group");     
+           p1.g2 = p1.add("group");
                 var prepressCheckBox = p1.g2.add("checkbox");
                     prepressCheckBox.value = true;
                 var prepressCheckBoxStatictext = p1.g2.add('statictext {text: "Prepress Set-Up", justify: "left"}');
-            
+            p1.g3 = p1.add("group");     
+                var saveJobCheckBox = p1.g3.add("checkbox");
+                    saveJobCheckBox.value = true;
+                var saveJobCheckBoxStatictext = p1.g3.add('statictext {text: "Save Job As", justify: "left"}');
+                
         var buttonGroup = w.add ('group {alignment: "right"}');
             buttonGroup.add ("button", undefined, "OK");
             buttonGroup.add ("button", undefined, "Cancel");
     
     if (w.show () == 1) {
-        if (editCheckBox.value = true) {
+        if (editCheckBox.value == true) {
             //editOneUp ();
         };
-        if (prepressCheckBox.value = true) {
+        if (prepressCheckBox.value == true) {
             //prepressSetup ();
+        };
+        if (saveJobCheckBox.value == true) {
+            saveJobAs ();
         };
         alert('Job worklow finished successfully...');
     };
 };
 //
 // TESTING
-jobWorkflow ();
+//jobWorkflow ();
