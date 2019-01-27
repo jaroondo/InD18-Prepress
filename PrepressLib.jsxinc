@@ -1596,9 +1596,12 @@ function saveJobAs () {
         return;
     };
     var dh = eval(myDocument.extractLabel("dh"));
-    
-    $.writeln(dh.artworkFile);
-    alert("Job saved successfully...");
+    var pathLength = dh.artworkFile.fullName.length
+    //$.writeln(myDocument.fullName);
+    //$.writeln(dh.artworkFile.fullName.substr(0, pathLength - 3) + "indd");
+    if (myDocument.fullName.copy (dh.artworkFile.fullName.substr(0, pathLength - 3) + "indd")) {
+        alert("Job saved successfully...");
+    };
 };
 //
 // MENU
@@ -2526,7 +2529,7 @@ function jobWorkflow () {
                 var prepressCheckBoxStatictext = p1.g2.add('statictext {text: "Prepress Set-Up", justify: "left"}');
             p1.g3 = p1.add("group");     
                 var saveJobCheckBox = p1.g3.add("checkbox");
-                    saveJobCheckBox.value = true;
+                    saveJobCheckBox.value = false;
                 var saveJobCheckBoxStatictext = p1.g3.add('statictext {text: "Save Job As", justify: "left"}');
                 
         var buttonGroup = w.add ('group {alignment: "right"}');
@@ -2535,10 +2538,10 @@ function jobWorkflow () {
     
     if (w.show () == 1) {
         if (editCheckBox.value == true) {
-            //editOneUp ();
+            editOneUp ();
         };
         if (prepressCheckBox.value == true) {
-            //prepressSetup ();
+            prepressSetup ();
         };
         if (saveJobCheckBox.value == true) {
             saveJobAs ();
