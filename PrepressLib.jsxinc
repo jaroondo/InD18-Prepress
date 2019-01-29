@@ -1602,6 +1602,22 @@ function saveJobAs () {
         //alert('Saved...');
     };
 };
+function pdfExport () {
+    try {
+        myDocument = app.activeDocument;
+    } catch (myError) {
+        alert("You have not opened any document...");
+        return;
+    };
+    var myPDFExportPreset = app.pdfExportPresets.item("CTP");
+    app.pdfExportPreferences.viewPDF = true;
+    myDocument.exportFile(
+        ExportFormat.pdfType,
+        File(Folder.desktop + "/ExportPDFWithPreset.pdf"),
+        false, 
+        myPDFExportPreset
+    );
+};
 //
 // MENU
 function prePressMenu() { // Prepress Menu
@@ -2526,10 +2542,14 @@ function jobWorkflow () {
                 var prepressCheckBox = p1.g2.add("checkbox");
                     prepressCheckBox.value = true;
                 var prepressCheckBoxStatictext = p1.g2.add('statictext {text: "Prepress Set-Up", justify: "left"}');
-            p1.g3 = p1.add("group");     
+           p1.g3 = p1.add("group");     
                 var saveJobCheckBox = p1.g3.add("checkbox");
                     saveJobCheckBox.value = true;
                 var saveJobCheckBoxStatictext = p1.g3.add('statictext {text: "Save Job As", justify: "left"}');
+           p1.g4 = p1.add("group");     
+                var pdfExpCheckBox = p1.g4.add("checkbox");
+                    pdfExpCheckBox.value = true;
+                var pdfExpCheckBoxStatictext = p1.g4.add('statictext {text: "Export to PDF", justify: "left"}');
                 
         var buttonGroup = w.add ('group {alignment: "right"}');
             buttonGroup.add ("button", undefined, "OK");
@@ -2544,6 +2564,9 @@ function jobWorkflow () {
         };
         if (saveJobCheckBox.value == true) {
             saveJobAs ();
+        };
+        if (pdfExpCheckBox.value == true) {
+            pdfExport ();
         };
         alert('Job worklow finished successfully...');
     };
