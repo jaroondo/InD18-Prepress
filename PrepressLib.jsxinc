@@ -1613,10 +1613,11 @@ function pdfExport () {
     app.pdfExportPreferences.viewPDF = true;
     myDocument.exportFile(
         ExportFormat.pdfType,
-        File(Folder.desktop + "/ExportPDFWithPreset.pdf"),
+        File(myDocument.fullName + ".pdf"),
         false, 
         myPDFExportPreset
     );
+    myDocument.save(File(myDocument.fullName));
 };
 //
 // MENU
