@@ -2551,6 +2551,10 @@ function jobWorkflow () {
                 var pdfExpCheckBox = p1.g4.add("checkbox");
                     pdfExpCheckBox.value = true;
                 var pdfExpCheckBoxStatictext = p1.g4.add('statictext {text: "Export to PDF", justify: "left"}');
+           p1.g5 = p1.add("group");     
+                var closeCheckBox = p1.g5.add("checkbox");
+                    closeCheckBox.value = true;
+                var closeCheckBoxStatictext = p1.g5.add('statictext {text: "Close document", justify: "left"}');
                 
         var buttonGroup = w.add ('group {alignment: "right"}');
             buttonGroup.add ("button", undefined, "OK");
@@ -2568,6 +2572,9 @@ function jobWorkflow () {
         };
         if (pdfExpCheckBox.value == true) {
             pdfExport ();
+        };
+        if (closeCheckBox.value == true) {
+            myDocument.close();
         };
         alert('Job worklow finished successfully...');
     };
