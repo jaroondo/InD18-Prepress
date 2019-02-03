@@ -44,6 +44,8 @@ var pbar = progWin.children[1];
 var myLinkedFile = {};
 var xmpLinkedFile = {};
 var myLinkedXmp = {};
+var jobPrefs = new JobPreferencies ();
+var jobPrefsFile = new File(imagesFolder + "JobPreferences.txt");
 //
 // OBJEKTY
 function PrintingPlate() { /*definicia objektu tlačiarenska platňa*/
@@ -197,7 +199,7 @@ function DieSet() { /*definicia array-like objektu - výsek*/
         };
     };
 };
-function DataHolder () { // definicia objektu zasobnik dat
+function DataHolder() { // definicia objektu zasobnik dat
     this.plateName = "plate name";
     this.bottomPrint = false;
     this.plateWidth = 0.0;
@@ -493,6 +495,13 @@ function ScaleStrip() { // definicia array-like objektu opakujuci sa pasik skaly
 			return this[i-1];
 		} else { alert("scaleStrip.length = 0, nema ziadnu polozku")};
 	};
+};
+function JobPreferencies() {
+    this.templatesFolder = new Folder();
+    this.defaultTopTemplateFile = new File();
+    this.defaultBottomTemplateFile = new File();
+    this.defaultPreviewTemplateFile = new File();
+    this.jobsRootFolder = new Folder();
 };
 //
 // METODY
@@ -2579,6 +2588,77 @@ function jobWorkflow () {
         alert('Job worklow finished successfully...');
     };
 };
+function jobPreferencies () {
+    jobPrefsFile.open("r");
+    jobPrefs = eval(jobPrefsFile.read());
+    jobPrefsFile.close();
+    var w = new Window ("dialog", "Job Workflow Preferencies...");
+        w.alignChildren = "left";
+        var p1 = w.add ('panel {text: "", borderstyle: "gray", alignChildren: "fill", alignment: "fill"}');
+            p1.g1 = p1.add("group");
+                var templatesFolderStatictext = p1.g1.add('statictext {text: "Templates Folder: ", justify: "left"}');
+                    templatesFolderStatictext.characters = 11;
+                var templatesFolderEdittext = p1.g1.add("edittext", undefined,  jobPrefs.templatesFolder.fsName, {readonly: true, justify: "left"});
+                    templatesFolderEdittext.characters = 35;
+                var templatesFolderBtn = p1.g1.add ("button", undefined, "Select");
+                templatesFolderBtn.onClick = function () {
+                    var templatesFolderSelected = jobPrefs.templatesFolder.selectDlg ("Select Templates Folder");
+                    if (templatesFolderSelected != null) {
+                        jobPrefs.templatesFolder = templatesFolderSelected;
+                        templatesFolderEdittext.text = jobPrefs.templatesFolder.fsName;
+                    };
+                };
+        p1.g2 = p1.add("group");
+                var topPrintingStatictext = p1.g2.add('statictext {text: "Top Printing: ", justify: "left"}');
+                    topPrintingStatictext.characters = 11;
+                var topPrintingEdittext = p1.g2.add("edittext", undefined,  jobPrefs.defaultTopTemplateFile.displayName, {readonly: true, justify: "left"});
+                    topPrintingEdittext.characters = 35;
+                var topPrintingBtn = p1.g2.add ("button", undefined, "Select");
+                topPrintingBtn.onClick = function () {
+                    var topPrintingSelected = jobPrefs.templatesFolder.openDlg ("Select Top Printing Template File");
+                    if (topPrintingSelected != null) {
+                        jobPrefs.defaultTopTemplateFile = topPrintingSelected;
+                        topPrintingEdittext.text = jobPrefs.defaultTopTemplateFile.displayName;
+                    };
+                };
+        p1.g3 = p1.add("group");
+                var bottomPrintingStatictext = p1.g3.add('statictext {text: "Bottom Printing: ", justify: "left"}');
+                    bottomPrintingStatictext.characters = 11;
+                var bottomPrintingEdittext = p1.g3.add("edittext", undefined,  jobPrefs.defaultBottomTemplateFile.displayName, {readonly: true, justify: "left"});
+                    bottomPrintingEdittext.characters = 35;
+                var bottomPrintingBtn = p1.g3.add ("button", undefined, "Select");
+                bottomPrintingBtn.onClick = function () {
+                    var bottomPrintingSelected = jobPrefs.templatesFolder.openDlg ("Select Bottom Printing Template File");
+                    if (bottomPrintingSelected != null) {
+                        jobPrefs.defaultBottomTemplateFile = bottomPrintingSelected;
+                        bottomPrintingEdittext.text = jobPrefs.defaultBottomTemplateFile.displayName;
+                    };
+                };
+        p1.g4 = p1.add("group");
+                var artworkPreviewStatictext = p1.g4.add('statictext {text: "Artwork Preview: ", justify: "left"}');
+                    artworkPreviewStatictext.characters = 11;
+                var artworkPreviewEdittext = p1.g4.add("edittext", undefined,  jobPrefs.defaultPreviewTemplateFile.displayName, {readonly: true, justify: "left"});
+                    artworkPreviewEdittext.characters = 35;
+                var artworkPreviewBtn = p1.g4.add ("button", undefined, "Select");
+                artworkPreviewBtn.onClick = function () {
+                    var artworkPreviewSelected = jobPrefs.templatesFolder.openDlg ("Select Artwork Preview Template File");
+                    if (artworkPreviewSelected != null) {
+                        jobPrefs.defaultPreviewTemplateFile = artworkPreviewSelected;
+                        artworkPreviewEdittext.text = jobPrefs.defaultPreviewTemplateFile.displayName;
+                    };
+                };
+        
+        var buttonGroup = w.add ('group {alignment: "right"}');
+            buttonGroup.add ("button", undefined, "OK");
+            buttonGroup.add ("button", undefined, "Cancel");
+    
+    if (w.show () == 1) {
+        jobPrefsFile.open("w");
+        jobPrefsFile.write(jobPrefs.toSource());
+        jobPrefsFile.close();
+        alert('Job Preferencies saved successfully...');
+    };
+};
 //
 // TESTING
-//jobWorkflow ();
+//jobPreferencies ();
