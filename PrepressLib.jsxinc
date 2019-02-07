@@ -2554,11 +2554,15 @@ function prepressSetup (doneAlert) { // nastavenie celeho pre-pressu
     };
 };
 function jobWorkflow () {
-    try {
-        myDocument = app.activeDocument;
-    } catch (myError) {
-        alert("You have not opened any document...");
-        return;
+    loadJobPrefs ();
+    if (app.documents.length == 0) {
+        var docToOpen = jobPrefs.templatesFolder.openDlg ("Select Template File");
+        if (docToOpen != null) {
+            app.open(docToOpen);
+        } else {
+            alert("You have not opened any document...");
+            return;
+        };
     };
     var w = new Window ("dialog", "Job Workflow...");
         w.alignChildren = "left";
