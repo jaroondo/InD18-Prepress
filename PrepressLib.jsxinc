@@ -1597,7 +1597,7 @@ function readXMPdata (source) {
         unloadXMPLibrary();
     };
 };
-function saveJobAs () {
+function saveJobAs (doneAlert) {
     try {
         myDocument = app.activeDocument;
     } catch (myError) {
@@ -1608,7 +1608,13 @@ function saveJobAs () {
     var pathLength = dh.artworkFile.fullName.length
     if(myDocument.modified == true){
         myDocument.save(File(dh.artworkFile.fullName.substr(0, pathLength - 3) + "indd"));
-        //alert('Saved...');
+//~         if (doneAlert) {
+//~             alert('Document Saved As: ' + myDocument.name);
+//~         };
+    } else {
+        if (doneAlert) {
+            alert('Document Was Not Modified...');
+        };
     };
 };
 function pdfExport () {
@@ -1654,27 +1660,42 @@ function prePressMenu() { // Prepress Menu
         newTemplateAction.eventListeners.add("onInvoke", function(){ newDialog(); });
     var newTemplateMenuItem = prepressMenu.menuItems.add(newTemplateAction);
         prepressMenu.menuSeparators.add();
-//  Edit SubMenu
+//  Tasks SubMenu
     try {
-        var editSubmenu = prepressMenu.submenus.item("Edit...").remove();
-        editSubmenu.title;
+        var tasksSubmenu = prepressMenu.submenus.item("Tasks...").remove();
+        tasksSubmenu.title;
     } catch (myError){
-        //var editSubmenu = prepressMenu.submenus.add("Edit...");
+        var tasksSubmenu = prepressMenu.submenus.add("Tasks...");
     };
-    //editSubmenu.menuSeparators.add();
-    var editOneupAction = app.scriptMenuActions.add("Edit One-Up...");
-        editOneupAction.eventListeners.add("onInvoke", function() { 
-            editOneUp(true);
-        });
-    //editSubmenu.menuItems.add(editOneupAction);
-    var editOneUpMenuItem = prepressMenu.menuItems.add(editOneupAction);
-// Run Prepress MenuItem
-        prepressMenu.menuSeparators.add();
-    var runSetupAction = app.scriptMenuActions.add("Run Setting-up...");
-        runSetupAction.eventListeners.add("onInvoke", function() { 
-           prepressSetup(true);
-        });
-    var runSetupMenuItem = prepressMenu.menuItems.add(runSetupAction);
+        //Edit One-Up SubMenuItem
+        //tasksSubmenu.menuSeparators.add();
+        var editOneupAction = app.scriptMenuActions.add("Edit One-Up...");
+            editOneupAction.eventListeners.add("onInvoke", function() { 
+                editOneUp(true);
+            });
+        //tasksSubmenu.menuItems.add(editOneupAction);
+        var editOneUpMenuItem = tasksSubmenu.menuItems.add(editOneupAction);
+        // RunPrepress SubMenuItem
+        //tasksSubmenu.menuSeparators.add();
+        var runSetupAction = app.scriptMenuActions.add("Run Setting-up...");
+            runSetupAction.eventListeners.add("onInvoke", function() { 
+               prepressSetup(true);
+            });
+        var runSetupMenuItem = tasksSubmenu.menuItems.add(runSetupAction);
+        // SaveJobAs SubMenuItem
+        //tasksSubmenu.menuSeparators.add();
+        var saveJobAsAction = app.scriptMenuActions.add("Save Job As...");
+            saveJobAsAction.eventListeners.add("onInvoke", function() { 
+               saveJobAs (true);
+            });
+        var saveJobAsMenuItem = tasksSubmenu.menuItems.add(saveJobAsAction);
+        // ExportToPdf SubMenuItem
+        //tasksSubmenu.menuSeparators.add();
+        var exportToPdfAction = app.scriptMenuActions.add("Export To PDF...");
+            exportToPdfAction.eventListeners.add("onInvoke", function() { 
+               pdfExport ();
+            });
+        var exportToPdfMenuItem = tasksSubmenu.menuItems.add(exportToPdfAction);
  // Job Workflow MenuItem
         prepressMenu.menuSeparators.add();
     var runJobAction = app.scriptMenuActions.add("Job Workflow...");
@@ -2600,7 +2621,7 @@ function jobWorkflow () {
             prepressSetup (false);
         };
         if (saveJobCheckBox.value == true) {
-            saveJobAs ();
+            saveJobAs (false);
         };
         if (pdfExpCheckBox.value == true) {
             pdfExport ();
@@ -2608,7 +2629,7 @@ function jobWorkflow () {
         if (closeCheckBox.value == true) {
             myDocument.close();
         };
-        alert('Job worklow finished successfully...');
+        //alert('Job worklow finished successfully...');
     };
 };
 function jobPreferencies () {
