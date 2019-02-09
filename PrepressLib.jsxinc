@@ -652,14 +652,14 @@ function duplicatePolygon (centerX, centerY, selection, newIdentity) {
     newPolygon.name = newIdentity;
     newPolygon.label = "[" + centerX + ", " + centerY + "]";
 };
-function makeSubtract(selection, subtract) { // odpocita polygon
+function makeSubtract (selection, subtract) { // odpocita polygon
 	var result = getPageItem(selection);
 	var origName = result.name
 	var subtraction = getPageItem(subtract);
 	subtraction.subtractPath(result);
 	result.name = origName;
 };
-function makeIntersect(selection, intersect) { // prienik s polygonom
+function makeIntersect (selection, intersect) { // prienik s polygonom
 	var result = getPageItem(selection);
 	var origName = result.name;
 	var intersection = getPageItem(intersect);
@@ -753,7 +753,7 @@ function makeCropMarksMask (x, y, start, repeat, identity) { // maska orezovych 
     app.pasteInto();
     moveInside (0, 0, getPageItem (identity).allPageItems[0]);
 };
-function makeBleedSet(centerX, centerY) { // vytvori vzorovu sadu koruniek
+function makeBleedSet (centerX, centerY) { // vytvori vzorovu sadu koruniek
     if (printingPlate.bottomPrinting == true) {
         makeMask (centerX, centerY, 5, 3, "LT");
         makeMask (centerX, centerY, 0, 2, "T");
@@ -966,14 +966,14 @@ function drawCropMarks () { // nakresli orezove znacky
     };
     removeMaskedSet ();
 };
-function getLibraryList() { // vrati zoznam poloziek kniznice
+function getLibraryList () { // vrati zoznam poloziek kniznice
     var nameList = [];
     for (var i = 0; i < app.libraries[0].assets.length; i++) {
         nameList[i] = app.libraries[0].assets[i].name;
     };
     return nameList;
 };
-function getLibraryIndex(name) { // vrati index polozky kniznice podla mena
+function getLibraryIndex (name) { // vrati index polozky kniznice podla mena
     var list = getLibraryList ();
     var index = -1;
     for (var i = 0; i < list.length; i++) {
@@ -1302,7 +1302,7 @@ function setSxObjectStyles () { // nastavi objektove styly S1 az Sn
         scaleStrip[i].style.strokeColor = mySwatch[0];
     };
 };
-function showProps(obj, objName) { // pomocna pri ladeni - zobrazenie vycislitelnych parametrov objektu
+function showProps (obj, objName) { // pomocna pri ladeni - zobrazenie vycislitelnych parametrov objektu
   var result = "";
   for (var i in obj) {
     if (obj.hasOwnProperty(i)) {
@@ -1311,12 +1311,12 @@ function showProps(obj, objName) { // pomocna pri ladeni - zobrazenie vycislitel
   };
   return result;
 };
-function showItems(obj, note) { // pomocna pri ladeni- vypis poloziek objektu
+function showItems (obj, note) { // pomocna pri ladeni- vypis poloziek objektu
   for (var i in obj) {
     $.writeln(note + " " + obj[i]);
   };
 };
-function showAllProps() { // pomocna pri ladeni - vypis vsetkych parametrov egInks
+function showAllProps () { // pomocna pri ladeni - vypis vsetkych parametrov egInks
     for (i in egInks) { 
         $.write(showProps( egInks[i], " egInks[" + i + "]") );
     };
@@ -1539,7 +1539,7 @@ function cropMarkLogoNumber () { // vyfarbi orezove znacky, loga a cisla razniko
             myParagraphStyle.itemByName("PunchNumber").overprintFill = false;
 	};
 };
-function removeUnusedSwatch() { //vyhodi vsetky swatch a nahradi ciernou
+function removeUnusedSwatch () { //vyhodi vsetky swatch a nahradi ciernou
     var mySwatches = app.activeDocument.swatches;
     var myLength = mySwatches.length;
     var xName = "";
@@ -1639,9 +1639,39 @@ function loadJobPrefs () {
     jobPrefs = eval(jobPrefsFile.read());
     jobPrefsFile.close();
 };
+function jpgExport (artworkFile) {
+    try {
+        myDocument = app.activeDocument;
+    } catch (myError) {
+        alert("You have not opened any document...");
+        return;
+    };
+    //app.pdfExportPreferences.viewPDF = true;
+    with(app.jpegExportPreferences) {
+        antiAlias = true,
+        exportResolution = 300.00,
+        jpegQuality = JPEGOptionsQuality.HIGH;
+        jpegColorSpace = JpegColorSpaceEnum.RGB;
+        jpegRenderingStyle = JPEGOptionsFormat.BASELINE_ENCODING;
+        simulateOverprint = true;
+    };
+    myDocument.exportFile(
+        ExportFormat.JPG,
+        File(artworkFile + ".jpg"),
+        false, 
+        undefined
+    );
+};
+function artworkPreview (artworkFile) {
+    loadJobPrefs ();
+    app.open(jobPrefs.defaultPreviewTemplateFile);
+    app.activeDocument.links[0].relink(artworkFile);
+    jpgExport (artworkFile);
+    app.activeDocument.close(SaveOptions.NO);
+};
 //
 // MENU
-function prePressMenu() { // Prepress Menu
+function prePressMenu () { // Prepress Menu
     try {
         var prepressMenu = app.menus.item("$ID/Main").submenus.item("Prepress");
         prepressMenu.title;
@@ -2701,6 +2731,7 @@ function jobPreferencies () {
         alert('Job Preferencies saved successfully...');
     };
 };
+
 //
 // TESTING
-//jobPreferencies ();
+//artworkPreview (File("C:/!DATA/WBC/2639-AC00 BRAHMA 340 GS2500/2639_AC00_BRAHMA 340 GS2500_JON_20190115_131213.pdf"));
