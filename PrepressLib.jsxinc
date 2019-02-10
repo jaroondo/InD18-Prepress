@@ -1665,9 +1665,68 @@ function jpgExport (artworkFile) {
 function artworkPreview (artworkFile) {
     loadJobPrefs ();
     app.open(jobPrefs.defaultPreviewTemplateFile);
-    app.activeDocument.links[0].relink(artworkFile);
-    jpgExport (artworkFile);
-    app.activeDocument.close(SaveOptions.NO);
+    myDocument = app.documents.lastItem();
+    myDocument.links[0].relink(artworkFile);
+
+    mySwatch = myDocument.swatches;
+    myColor = myDocument.colors;
+    myObjectStyle = myDocument.objectStyles;
+    myParagraphStyle = myDocument.paragraphStyles;
+    myCharacterStyle = myDocument.characterStyles;
+    myTextVariable = myDocument.textVariables;
+    myLinkXmp = myDocument.links[0].linkXmp;
+    myXmpInksCount = myLinkXmp.countContainer("http://ns.esko-graphics.com/grinfo/1.0/","inks");
+    myMixedInk = myDocument.mixedInks;
+    myInk = myDocument.inks;
+    myTint = myDocument.tints;
+    
+    readXMPdata(myDocument.links[0].filePath);
+    
+    //primer
+    if (myLinkXmp.getProperty ("http://my.wbcSchema.namespace/", "primer").toString() == "White basecoat") {
+        myDocument.layers.itemByName("basecoat").visible = false;
+    } else {
+        myDocument.layers.itemByName("basecoat").visible = true;
+    };
+
+    //logo
+    var logo = myLinkXmp.getProperty ("http://my.wbcSchema.namespace/", "logo").toString();
+    if ( logo == "0" || logo == "-0") {
+        myDocument.layers.itemByName("logo CP").visible = false;
+    } else {
+        myDocument.layers.itemByName("logo CP").visible = true;
+    };
+    getPageItem ("LOGO").rotationAngle = Number(logo);
+    
+    setEgInks ();
+    var posInk = egInks.getDarkest ("ink", "positiveInksFilterCondition");
+    var posDensity = 0;
+    if (posInk.length > 0) {posDensity = posInk[0].neutralDensity};
+    var negInk = egInks.getDarkest ("ink", "negativeInksFilterCondition");
+    var negDensity = 0;
+    if (negInk.length > 0) {negDensity = negInk[0].neutralDensity};
+    var deltaD = Math.abs(posDensity - negDensity); //  rozdiel denzit
+    var posDensityTreshold = (posDensity / 100 * 25); // % prah pozitivnej denzity
+	if (posDensity > negDensity && deltaD > posDensityTreshold) { /* pozitivna je tmavsia ako negativna a rozdiel je vacsi ako 50% pozitivnej */
+        var fillColor = egInks.getDarkest ("swatch", "positiveInksFilterCondition")[0];
+            //myObjectStyle.itemByName("CutMarks").strokeColor = fillColor;
+            //myObjectStyle.itemByName("CutMarks").overprintStroke = true;
+            myObjectStyle.itemByName("Logo").fillColor = fillColor;
+            myObjectStyle.itemByName("Logo").overprintFill = true;
+            //myParagraphStyle.itemByName("PunchNumber").fillColor = fillColor;
+            //myParagraphStyle.itemByName("PunchNumber").overprintFill = true;
+	} else {
+            //myObjectStyle.itemByName("CutMarks").strokeColor = mySwatch[2];
+            myObjectStyle.itemByName("Logo").fillColor = mySwatch[2];
+            //myParagraphStyle.itemByName("PunchNumber").fillColor = mySwatch[1];
+            //myParagraphStyle.itemByName("PunchNumber").fillTint = 0;
+            //myParagraphStyle.itemByName("PunchNumber").overprintFill = false;
+	};
+
+    //jpgExport (artworkFile);
+    
+    jpgExport (File(artworkFile.fullName.substr(0, artworkFile.fullName.indexOf("."))));
+    myDocument.close(SaveOptions.NO);
 };
 //
 // MENU
