@@ -1662,7 +1662,7 @@ function jpgExport (artworkFile) {
         undefined
     );
 };
-function artworkPreview (artworkFile) {
+function artworkPreview (artworkFile, jpgExp) {
     loadJobPrefs ();
     app.open(jobPrefs.defaultPreviewTemplateFile);
     myDocument = app.documents.lastItem();
@@ -1722,10 +1722,10 @@ function artworkPreview (artworkFile) {
             //myParagraphStyle.itemByName("PunchNumber").fillTint = 0;
             //myParagraphStyle.itemByName("PunchNumber").overprintFill = false;
 	};
-
-    //jpgExport (artworkFile);
     
-    jpgExport (File(artworkFile.fullName.substr(0, artworkFile.fullName.indexOf("."))));
+    if (jpgExp == true) {
+        jpgExport (File(artworkFile.fullName.substr(0, artworkFile.fullName.indexOf("."))));
+    };   
     myDocument.close(SaveOptions.NO);
 };
 //
@@ -1785,6 +1785,13 @@ function prePressMenu () { // Prepress Menu
                pdfExport ();
             });
         var exportToPdfMenuItem = tasksSubmenu.menuItems.add(exportToPdfAction);
+        // Make Preview SubMenuItem
+        //tasksSubmenu.menuSeparators.add();
+        var previewAction = app.scriptMenuActions.add("Make Preview...");
+            previewAction.eventListeners.add("onInvoke", function() { 
+               makePreview ();
+            });
+        var previewMenuItem = tasksSubmenu.menuItems.add(previewAction);
  // Job Workflow MenuItem
         prepressMenu.menuSeparators.add();
     var runJobAction = app.scriptMenuActions.add("Job Workflow...");
@@ -2790,7 +2797,37 @@ function jobPreferencies () {
         alert('Job Preferencies saved successfully...');
     };
 };
-
+function makePreview () {
+    var artworkSelected = new File();
+    var w = new Window ("dialog", "Artwork preview...");
+        w.alignChildren = "left";
+        var p1 = w.add ('panel {text: "Artwork", borderstyle: "gray", alignChildren: "fill", alignment: "fill"}');
+            p1.g1 = p1.add("group");
+                var artworkStatictext = p1.g1.add('statictext {text: "Selected File: ", justify: "left"}');
+                    artworkStatictext.characters = 8;
+                var artworkEdittext = p1.g1.add("edittext", undefined,  "unknown", {readonly: true, justify: "left"});
+                    artworkEdittext.characters = 35;
+                var artworkBtn = p1.g1.add ("button", undefined, "Select");
+                artworkBtn.onClick = function () {
+                    artworkSelected = File().openDlg ("Select Artwork File");
+                    if (artworkSelected != null) {
+                        artworkEdittext.text = artworkSelected.fsName;
+                    };
+                };
+        p1.g2 = p1.add("group");
+                var jpgCheckBox = p1.g2.add("checkbox");
+                    jpgCheckBox.value = true;
+                var jpgCheckBoxStatictext = p1.g2.add('statictext {text: "Export Preview to JPG", justify: "left"}');
+        
+        var buttonGroup = w.add ('group {alignment: "right"}');
+            buttonGroup.add ("button", undefined, "OK");
+            buttonGroup.add ("button", undefined, "Cancel");
+    
+    if (w.show () == 1) {
+        artworkPreview (artworkSelected, jpgCheckBox.value);
+        alert('Artwork preview saved to JPG successfully...');
+    };
+};
 //
 // TESTING
-//artworkPreview (File("C:/!DATA/WBC/2639-AC00 BRAHMA 340 GS2500/2639_AC00_BRAHMA 340 GS2500_JON_20190115_131213.pdf"));
+//makePreview ();
