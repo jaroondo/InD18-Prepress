@@ -2786,6 +2786,21 @@ function jobPreferencies () {
                     };
                 };
         
+        var p2 = w.add ('panel {text: "Targets", borderstyle: "gray", alignChildren: "fill", alignment: "fill"}');
+            p2.g1 = p2.add("group");
+                var jobsFolderStatictext = p2.g1.add('statictext {text: "Jobs Root Folder: ", justify: "left"}');
+                    jobsFolderStatictext.characters = 11;
+                var jobsFolderEdittext = p2.g1.add("edittext", undefined,  jobPrefs.jobsRootFolder.fsName, {readonly: true, justify: "left"});
+                    jobsFolderEdittext.characters = 35;
+                var jobsFolderBtn = p2.g1.add ("button", undefined, "Select");
+                jobsFolderBtn.onClick = function () {
+                    var jobsFolderSelected = jobPrefs.jobsRootFolder.selectDlg ("Select Jobs Root Folder");
+                    if (jobsFolderSelected != null) {
+                        jobPrefs.jobsRootFolder = jobsFolderSelected;
+                        jobsFolderEdittext.text = jobPrefs.jobsRootFolder.fsName;
+                    };
+                };
+        
         var buttonGroup = w.add ('group {alignment: "right"}');
             buttonGroup.add ("button", undefined, "OK");
             buttonGroup.add ("button", undefined, "Cancel");
@@ -2798,6 +2813,7 @@ function jobPreferencies () {
     };
 };
 function makePreview () {
+    loadJobPrefs ();
     var artworkSelected = new File();
     var w = new Window ("dialog", "Artwork preview...");
         w.alignChildren = "left";
@@ -2805,13 +2821,13 @@ function makePreview () {
             p1.g1 = p1.add("group");
                 var artworkStatictext = p1.g1.add('statictext {text: "Selected File: ", justify: "left"}');
                     artworkStatictext.characters = 8;
-                var artworkEdittext = p1.g1.add("edittext", undefined,  "unknown", {readonly: true, justify: "left"});
-                    artworkEdittext.characters = 35;
+                var artworkEdittext = p1.g1.add("edittext", undefined,   "Please select artwork file...", {readonly: true, justify: "left"});
+                    artworkEdittext.characters = 50;
                 var artworkBtn = p1.g1.add ("button", undefined, "Select");
                 artworkBtn.onClick = function () {
-                    artworkSelected = File().openDlg ("Select Artwork File");
+                    artworkSelected = jobPrefs.jobsRootFolder.openDlg ("Select Artwork File", "Normalized PDF: *.pdf");
                     if (artworkSelected != null) {
-                        artworkEdittext.text = artworkSelected.fsName;
+                        artworkEdittext.text = artworkSelected.displayName;
                     };
                 };
         p1.g2 = p1.add("group");
@@ -2825,6 +2841,7 @@ function makePreview () {
     
     if (w.show () == 1) {
         artworkPreview (artworkSelected, jpgCheckBox.value);
+        //File(artworkSelected.fullName.substr(0, artworkSelected.fullName.indexOf(".")) + ".jpg").execute();
         alert('Artwork preview saved to JPG successfully...');
     };
 };
