@@ -2843,8 +2843,9 @@ function makePreview () {
         artworkPreview (artworkSelected, jpgCheckBox.value);
         //File(artworkSelected.fullName.substr(0, artworkSelected.fullName.indexOf(".")) + ".jpg").execute();
         alert('Artwork preview saved to JPG successfully...');
+        return artworkSelected;
     };
 };
 //
 // TESTING
-//makePreview ();
+makePreview ();
