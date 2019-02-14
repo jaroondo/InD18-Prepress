@@ -1683,7 +1683,7 @@ function artworkPreview (artworkFile, jpgExp) {
     readXMPdata(myDocument.links[0].filePath);
     
     //primer
-    if (myLinkXmp.getProperty ("http://my.wbcSchema.namespace/", "primer").toString() == "White basecoat") {
+    if (myLinkXmp.getProperty ("http://my.wbcSchema.namespace/", "primer").toString().search(/White/i) != -1) {
         myDocument.layers.itemByName("basecoat").visible = false;
     } else {
         myDocument.layers.itemByName("basecoat").visible = true;
