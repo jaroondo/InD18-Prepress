@@ -1665,7 +1665,7 @@ function jpgExport (artworkFile) {
 function artworkPreview (artworkFile, jpgExp) {
     loadJobPrefs ();
     app.open(jobPrefs.defaultPreviewTemplateFile);
-    myDocument = app.documents.lastItem();
+    myDocument = app.activeDocument;
     myDocument.links[0].relink(artworkFile);
 
     mySwatch = myDocument.swatches;
@@ -2607,6 +2607,7 @@ function editOneUp (doneAlert) {
         if (doneAlert) {
             alert("One-Up editing was successfully...");
         };
+        return dh.artworkFile;
     };
 };
 function prepressSetup (doneAlert) { // nastavenie celeho pre-pressu
@@ -2671,16 +2672,6 @@ function prepressSetup (doneAlert) { // nastavenie celeho pre-pressu
     };
 };
 function jobWorkflow () {
-    loadJobPrefs ();
-    if (app.documents.length == 0) {
-        var docToOpen = jobPrefs.templatesFolder.openDlg ("Select Template File");
-        if (docToOpen != null) {
-            app.open(docToOpen);
-        } else {
-            alert("You have not opened any document...");
-            return;
-        };
-    };
     var w = new Window ("dialog", "Job Workflow...");
         w.alignChildren = "left";
         var p1 = w.add ('panel {text: "", borderstyle: "gray", alignChildren: "fill", alignment: "fill"}');
@@ -2704,6 +2695,10 @@ function jobWorkflow () {
                 var closeCheckBox = p1.g5.add("checkbox");
                     closeCheckBox.value = true;
                 var closeCheckBoxStatictext = p1.g5.add('statictext {text: "Close document", justify: "left"}');
+           p1.g6 = p1.add("group");     
+                var thumbnailCheckBox = p1.g6.add("checkbox");
+                    thumbnailCheckBox.value = true;
+                var thumbnailCheckBoxStatictext = p1.g6.add('statictext {text: "Artwork JPG thumbnail", justify: "left"}');
                 
         var buttonGroup = w.add ('group {alignment: "right"}');
             buttonGroup.add ("button", undefined, "OK");
@@ -2711,7 +2706,7 @@ function jobWorkflow () {
     
     if (w.show () == 1) {
         if (editCheckBox.value == true) {
-            editOneUp (false);
+            var awFile = editOneUp (false);
         };
         if (prepressCheckBox.value == true) {
             prepressSetup (false);
@@ -2724,6 +2719,13 @@ function jobWorkflow () {
         };
         if (closeCheckBox.value == true) {
             myDocument.close();
+        };
+        if (thumbnailCheckBox.value == true) {
+            if (awFile != undefined) {
+                artworkPreview (awFile, true);
+            } else {
+                makePreview ();
+            };
         };
         //alert('Job worklow finished successfully...');
     };
@@ -2834,6 +2836,10 @@ function makePreview () {
                 var jpgCheckBox = p1.g2.add("checkbox");
                     jpgCheckBox.value = true;
                 var jpgCheckBoxStatictext = p1.g2.add('statictext {text: "Export Preview to JPG", justify: "left"}');
+        p1.g3 = p1.add("group");
+                var previewCheckBox = p1.g3.add("checkbox");
+                    previewCheckBox.value = true;
+                var previewCheckBoxStatictext = p1.g3.add('statictext {text: "Preview JPG after saving", justify: "left"}');
         
         var buttonGroup = w.add ('group {alignment: "right"}');
             buttonGroup.add ("button", undefined, "OK");
@@ -2841,11 +2847,14 @@ function makePreview () {
     
     if (w.show () == 1) {
         artworkPreview (artworkSelected, jpgCheckBox.value);
-        //File(artworkSelected.fullName.substr(0, artworkSelected.fullName.indexOf(".")) + ".jpg").execute();
-        alert('Artwork preview saved to JPG successfully...');
-        return artworkSelected;
+        if (previewCheckBox.value) {
+            File(artworkSelected.fullName.substr(0, artworkSelected.fullName.indexOf(".")) + ".jpg").execute();
+        } else {
+            alert('Artwork preview saved to JPG successfully...');
+        };
+        return artworkSelected; // ak button "Cancel" vrati undefined
     };
 };
 //
 // TESTING
-makePreview ();
+//jobWorkflow ();
