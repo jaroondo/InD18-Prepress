@@ -2652,19 +2652,20 @@ function prepressSetup (doneAlert) { // nastavenie celeho pre-pressu
         clearCxVariables (); pbar.value = 2; progWin.update();
         usedInksList ();
     setProgWinContent ("Die Cut Passer", 0, 1); pbar.value = 1; progWin.update();
-        setDieCutPasser ();
+        setDieCutPasser (); // myObjectStyle.itemByName("DieCutMarks")
     setProgWinContent ("Low Inks Eater", 0, 1); pbar.value = 1; progWin.update();
-        lowInksEater (6);
+        lowInksEater (6); // myObjectStyle.itemByName("InksEater")
     setProgWinContent ("Negative Inks Eater", 0, 1); pbar.value = 1; progWin.update();    
-        negativeEater ();
+        negativeEater (); // myObjectStyle.itemByName("NegativeInksEater")
     setProgWinContent ("Litho Mark", 0, 1); pbar.value = 1; progWin.update();    
-        lithoMark ();
+        lithoMark (); // myObjectStyle.itemByName("LithoMark")
     setProgWinContent ("Passer Cross Marks", 0, 1); pbar.value = 1; progWin.update();    
-        doubleInksCrossMark ();
+        doubleInksCrossMark (); // myObjectStyle.itemByName("Passer"); ("Passer_1")
     //setProgWinContent ("Crop Marks, Logos, Punch Numbers", 0, 1); pbar.value = 0; progWin.update();    
-        cropMarkLogoNumber ();
-    setProgWinContent ("Color Scales", 0, 2); pbar.value = 1; progWin.update();0
-        setSxObjectStyles ();pbar.value = 2; progWin.update();
+        cropMarkLogoNumber (); //myObjectStyle.itemByName("CutMarks"); ("Logo"); myParagraphStyle.itemByName("PunchNumber")
+    setProgWinContent ("Color Scales", 0, 2); pbar.value = 1; progWin.update();
+        setSxObjectStyles (); // myDocument.objectStyles.itemByName("Scale" + j); 
+        pbar.value = 2; progWin.update();
         colorScales ();
     progWin.hide();
     if (doneAlert) {
