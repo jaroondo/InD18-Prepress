@@ -2306,7 +2306,7 @@ function editOneUp (doneAlert) {
                 var loadArtworkBtn = p4.g1.add ("button", undefined, "Select");
                     loadArtworkBtn.enabled = getCheckBoxState (artworkNameCheckBox);
                     loadArtworkBtn.onClick = function () {
-                        var loadFile = dh.artworkFile.openDlg ("Load artwork file", "PDF: *.pdf, All files: *.*");
+                        var loadFile =  jobPrefs.jobsRootFolder.openDlg ("Load artwork file", "PDF: *.pdf, All files: *.*");
                         if (loadFile != null) {
                             dh.artworkFile = loadFile;
                             artworkName.text = dh.artworkFile.displayName;
@@ -2708,6 +2708,7 @@ function jobWorkflow () {
     if (w.show () == 1) {
         if (editCheckBox.value == true) {
             var awFile = editOneUp (false);
+            if (awFile == undefined) { return };
         };
         if (prepressCheckBox.value == true) {
             prepressSetup (false);
