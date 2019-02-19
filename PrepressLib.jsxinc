@@ -1662,7 +1662,7 @@ function jpgExport (artworkFile) {
         undefined
     );
 };
-function artworkPreview (artworkFile, jpgExp) {
+function artworkPreview (artworkFile, jpgExp, closeDoc) {
     loadJobPrefs ();
     app.open(jobPrefs.defaultPreviewTemplateFile);
     myDocument = app.activeDocument;
@@ -1725,8 +1725,11 @@ function artworkPreview (artworkFile, jpgExp) {
     
     if (jpgExp == true) {
         jpgExport (File(artworkFile.fullName.substr(0, artworkFile.fullName.indexOf("."))));
-    };   
-    myDocument.close(SaveOptions.NO);
+    };
+    if (closeDoc == true) {
+        myDocument.close(SaveOptions.NO);
+    };
+    
 };
 //
 // MENU
@@ -2842,21 +2845,23 @@ function makePreview () {
                 var previewCheckBox = p1.g3.add("checkbox");
                     previewCheckBox.value = true;
                 var previewCheckBoxStatictext = p1.g3.add('statictext {text: "Preview JPG after saving", justify: "left"}');
+        p1.g4 = p1.add("group");
+                var closeCheckBox = p1.g4.add("checkbox");
+                    closeCheckBox.value = true;
+                var closeCheckBoxStatictext = p1.g4.add('statictext {text: "Close document", justify: "left"}');
         
         var buttonGroup = w.add ('group {alignment: "right"}');
             buttonGroup.add ("button", undefined, "OK");
             buttonGroup.add ("button", undefined, "Cancel");
     
     if (w.show () == 1) {
-        artworkPreview (artworkSelected, jpgCheckBox.value);
+        artworkPreview (artworkSelected, jpgCheckBox.value, closeCheckBox.value);
         if (previewCheckBox.value) {
             File(artworkSelected.fullName.substr(0, artworkSelected.fullName.indexOf(".")) + ".jpg").execute();
-        } else {
-            alert('Artwork preview saved to JPG successfully...');
         };
         return artworkSelected; // ak button "Cancel" vrati undefined
     };
 };
 //
 // TESTING
-//jobWorkflow ();
+//makePreview ();
