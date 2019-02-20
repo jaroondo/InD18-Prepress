@@ -2727,7 +2727,7 @@ function jobWorkflow () {
         };
         if (thumbnailCheckBox.value == true) {
             if (awFile != undefined) {
-                artworkPreview (awFile, true);
+                artworkPreview (awFile, true, true);
             } else {
                 makePreview ();
             };
