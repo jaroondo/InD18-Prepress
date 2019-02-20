@@ -10,7 +10,7 @@ var myScript = myGetScriptPath();
 var myParentFolder = File(myScript).parent.parent;
 var imagesFolder = myParentFolder + "/Prepress/";
 var myDocument = {};
-var artworkFile = new File(); //"D:/!DATA/!Export/composit KU korunka CP.pdf"
+var artworkFile = undefined; //new File(); //"D:/!DATA/!Export/composit KU korunka CP.pdf"
 var artworkRotationAngle = 0;
 var printingPlate = new PrintingPlate(); // platňa
 var dieSet = new DieSet(); // výsek
@@ -1666,6 +1666,7 @@ function artworkPreview (artworkFile, jpgExp, closeDoc) {
     loadJobPrefs ();
     app.open(jobPrefs.defaultPreviewTemplateFile);
     myDocument = app.activeDocument;
+    myDocument.layoutWindows[0].overprintPreview = true;
     myDocument.links[0].relink(artworkFile);
 
     mySwatch = myDocument.swatches;
@@ -1729,7 +1730,6 @@ function artworkPreview (artworkFile, jpgExp, closeDoc) {
     if (closeDoc == true) {
         myDocument.close(SaveOptions.NO);
     };
-    
 };
 //
 // MENU
@@ -2821,8 +2821,8 @@ function jobPreferencies () {
 };
 function makePreview () {
     loadJobPrefs ();
-    var artworkSelected = new File();
-    var w = new Window ("dialog", "Artwork preview...");
+    var artworkSelected;
+    var w = new Window ("palette", "Artwork preview...");
         w.alignChildren = "left";
         var p1 = w.add ('panel {text: "Artwork", borderstyle: "gray", alignChildren: "fill", alignment: "fill"}');
             p1.g1 = p1.add("group");
@@ -2834,33 +2834,42 @@ function makePreview () {
                 artworkBtn.onClick = function () {
                     artworkSelected = jobPrefs.jobsRootFolder.openDlg ("Select Artwork File", "Normalized PDF: *.pdf");
                     if (artworkSelected != null) {
+                        artworkFile = artworkSelected;
                         artworkEdittext.text = artworkSelected.displayName;
+                        artworkPreview (artworkSelected, false, false);
                     };
                 };
         p1.g2 = p1.add("group");
                 var jpgCheckBox = p1.g2.add("checkbox");
                     jpgCheckBox.value = true;
-                var jpgCheckBoxStatictext = p1.g2.add('statictext {text: "Export Preview to JPG", justify: "left"}');
+                var jpgCheckBoxStatictext = p1.g2.add('statictext {text: "Export to JPG", justify: "left"}');
         p1.g3 = p1.add("group");
                 var previewCheckBox = p1.g3.add("checkbox");
                     previewCheckBox.value = true;
-                var previewCheckBoxStatictext = p1.g3.add('statictext {text: "Preview JPG after saving", justify: "left"}');
+                var previewCheckBoxStatictext = p1.g3.add('statictext {text: "Preview JPG", justify: "left"}');
         p1.g4 = p1.add("group");
                 var closeCheckBox = p1.g4.add("checkbox");
                     closeCheckBox.value = true;
                 var closeCheckBoxStatictext = p1.g4.add('statictext {text: "Close document", justify: "left"}');
         
         var buttonGroup = w.add ('group {alignment: "right"}');
-            buttonGroup.add ("button", undefined, "OK");
-            buttonGroup.add ("button", undefined, "Cancel");
-    
-    if (w.show () == 1) {
-        artworkPreview (artworkSelected, jpgCheckBox.value, closeCheckBox.value);
-        if (previewCheckBox.value) {
-            File(artworkSelected.fullName.substr(0, artworkSelected.fullName.indexOf(".")) + ".jpg").execute();
-        };
-        return artworkSelected; // ak button "Cancel" vrati undefined
-    };
+            var okBtn = buttonGroup.add ("button", undefined, "OK");
+            okBtn.onClick = function () {
+                if (artworkSelected != undefined) {
+                    artworkPreview (artworkSelected, jpgCheckBox.value, closeCheckBox.value);
+                    if (previewCheckBox.value) {
+                        File(artworkSelected.fullName.substr(0, artworkSelected.fullName.indexOf(".")) + ".jpg").execute();
+                    };
+                };
+                w.close ();
+            };
+            var cancelBtn = buttonGroup.add ("button", undefined, "Cancel");
+            cancelBtn.onClick = function () {
+                try { app.activeDocument.close(SaveOptions.NO); } catch (err) {};
+                w.close ();
+            };
+
+        w.show();
 };
 //
 // TESTING
