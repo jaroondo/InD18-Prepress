@@ -2834,6 +2834,7 @@ function makePreview () {
                 artworkBtn.onClick = function () {
                     artworkSelected = jobPrefs.jobsRootFolder.openDlg ("Select Artwork File", "Normalized PDF: *.pdf");
                     if (artworkSelected != null) {
+                        okBtn.enabled = true;
                         artworkFile = artworkSelected;
                         artworkEdittext.text = artworkSelected.displayName;
                         artworkPreview (artworkSelected, false, false);
@@ -2854,6 +2855,7 @@ function makePreview () {
         
         var buttonGroup = w.add ('group {alignment: "right"}');
             var okBtn = buttonGroup.add ("button", undefined, "OK");
+            okBtn.enabled = false;
             okBtn.onClick = function () {
                 if (artworkSelected != undefined) {
                     artworkPreview (artworkSelected, jpgCheckBox.value, closeCheckBox.value);
