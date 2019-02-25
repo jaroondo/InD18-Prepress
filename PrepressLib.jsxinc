@@ -1710,18 +1710,18 @@ function artworkPreview (artworkFile, jpgExp, closeDoc) {
     var posDensityTreshold = (posDensity / 100 * 25); // % prah pozitivnej denzity
 	if (posDensity > negDensity && deltaD > posDensityTreshold) { /* pozitivna je tmavsia ako negativna a rozdiel je vacsi ako 50% pozitivnej */
         var fillColor = egInks.getDarkest ("swatch", "positiveInksFilterCondition")[0];
-            //myObjectStyle.itemByName("CutMarks").strokeColor = fillColor;
-            //myObjectStyle.itemByName("CutMarks").overprintStroke = true;
+            myObjectStyle.itemByName("CutMarks").strokeColor = fillColor;
+            myObjectStyle.itemByName("CutMarks").overprintStroke = true;
             myObjectStyle.itemByName("Logo").fillColor = fillColor;
             myObjectStyle.itemByName("Logo").overprintFill = true;
-            //myParagraphStyle.itemByName("PunchNumber").fillColor = fillColor;
-            //myParagraphStyle.itemByName("PunchNumber").overprintFill = true;
+            myParagraphStyle.itemByName("PunchNumber").fillColor = fillColor;
+            myParagraphStyle.itemByName("PunchNumber").overprintFill = true;
 	} else {
-            //myObjectStyle.itemByName("CutMarks").strokeColor = mySwatch[2];
+            myObjectStyle.itemByName("CutMarks").strokeColor = mySwatch[2];
             myObjectStyle.itemByName("Logo").fillColor = mySwatch[2];
-            //myParagraphStyle.itemByName("PunchNumber").fillColor = mySwatch[1];
-            //myParagraphStyle.itemByName("PunchNumber").fillTint = 0;
-            //myParagraphStyle.itemByName("PunchNumber").overprintFill = false;
+            myParagraphStyle.itemByName("PunchNumber").fillColor = mySwatch[1];
+            myParagraphStyle.itemByName("PunchNumber").fillTint = 0;
+            myParagraphStyle.itemByName("PunchNumber").overprintFill = false;
 	};
     
     if (jpgExp == true) {
@@ -2875,4 +2875,4 @@ function makePreview () {
 };
 //
 // TESTING
-//makePreview ();
+makePreview ();
