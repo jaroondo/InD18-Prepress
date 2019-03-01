@@ -2723,7 +2723,9 @@ function jobWorkflow () {
         };
         if (thumbnailCheckBox.value == true) {
             if (awFile != undefined) {
-                artworkPreview (awFile, true, true);
+                artworkPreview (awFile);
+                jpgExport (File(awFile.fullName.substr(0, awFile.fullName.indexOf("."))));
+                app.activeDocument.close(SaveOptions.NO);
             } else {
                 makePreview ();
             };
@@ -2876,4 +2878,4 @@ function makePreview () {
 };
 //
 // TESTING
-//makePreview ();
+
