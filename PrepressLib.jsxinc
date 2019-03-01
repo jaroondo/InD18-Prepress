@@ -1662,7 +1662,7 @@ function jpgExport (artworkFile) {
         undefined
     );
 };
-function artworkPreview (artworkFile, jpgExp, closeDoc) {
+function artworkPreview (artworkFile) {
     loadJobPrefs ();
     app.open(jobPrefs.defaultPreviewTemplateFile);
     myDocument = app.activeDocument;
@@ -1726,13 +1726,6 @@ function artworkPreview (artworkFile, jpgExp, closeDoc) {
             myParagraphStyle.itemByName("PunchNumber").fillTint = 0;
             myParagraphStyle.itemByName("PunchNumber").overprintFill = false;
 	};
-    
-    if (jpgExp == true) {
-        jpgExport (File(artworkFile.fullName.substr(0, artworkFile.fullName.indexOf("."))));
-    };
-    if (closeDoc == true) {
-        myDocument.close(SaveOptions.NO);
-    };
 };
 //
 // MENU
@@ -2840,7 +2833,7 @@ function makePreview () {
                         okBtn.enabled = true;
                         artworkFile = artworkSelected;
                         artworkEdittext.text = artworkSelected.displayName;
-                        artworkPreview (artworkSelected, false, false);
+                        artworkPreview (artworkSelected);
                     };
                 };
         p1.g2 = p1.add("group");
@@ -2861,9 +2854,14 @@ function makePreview () {
             okBtn.enabled = false;
             okBtn.onClick = function () {
                 if (artworkSelected != undefined) {
-                    artworkPreview (artworkSelected, jpgCheckBox.value, closeCheckBox.value);
+                    if (jpgCheckBox.value) {
+                        jpgExport (File(artworkFile.fullName.substr(0, artworkFile.fullName.indexOf("."))));
+                    };
                     if (previewCheckBox.value) {
                         File(artworkSelected.fullName.substr(0, artworkSelected.fullName.indexOf(".")) + ".jpg").execute();
+                    };
+                    if (closeCheckBox.value) {
+                        myDocument.close(SaveOptions.NO);
                     };
                 };
                 w.close ();
