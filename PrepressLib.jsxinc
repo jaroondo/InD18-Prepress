@@ -1682,6 +1682,7 @@ function artworkPreview (artworkFile, jpgExp, closeDoc) {
     myTint = myDocument.tints;
     
     readXMPdata(myDocument.links[0].filePath);
+    setEgInks ();
     
     //primer
     if (myLinkXmp.getProperty ("http://my.wbcSchema.namespace/", "primer").toString().search(/White/i) != -1) {
@@ -1699,7 +1700,9 @@ function artworkPreview (artworkFile, jpgExp, closeDoc) {
     };
     getPageItem ("LOGO").rotationAngle = Number(logo);
     
-    setEgInks ();
+    //punch number
+    getPageItem ("num00").contents = "0" + egInks.getInvertKey("name", "attribute", "technical").length.toString ();
+    
     var posInk = egInks.getDarkest ("ink", "positiveInksFilterCondition");
     var posDensity = 0;
     if (posInk.length > 0) {posDensity = posInk[0].neutralDensity};
@@ -2832,7 +2835,7 @@ function makePreview () {
                     artworkEdittext.characters = 50;
                 var artworkBtn = p1.g1.add ("button", undefined, "Select");
                 artworkBtn.onClick = function () {
-                    artworkSelected = jobPrefs.jobsRootFolder.openDlg ("Select Artwork File", "Normalized PDF: *.pdf, All files: *.*");
+                    artworkSelected = jobPrefs.jobsRootFolder.openDlg ("Select Artwork File", "All files: *.*, Normalized PDF: *.pdf, Adobe Illustrator: *.ai");
                     if (artworkSelected != null) {
                         okBtn.enabled = true;
                         artworkFile = artworkSelected;
@@ -2846,7 +2849,7 @@ function makePreview () {
                 var jpgCheckBoxStatictext = p1.g2.add('statictext {text: "Export to JPG", justify: "left"}');
         p1.g3 = p1.add("group");
                 var previewCheckBox = p1.g3.add("checkbox");
-                    previewCheckBox.value = true;
+                    previewCheckBox.value = false;
                 var previewCheckBoxStatictext = p1.g3.add('statictext {text: "Preview JPG", justify: "left"}');
         p1.g4 = p1.add("group");
                 var closeCheckBox = p1.g4.add("checkbox");
