@@ -2833,7 +2833,7 @@ function makePreview () {
                     artworkSelected = jobPrefs.jobsRootFolder.openDlg ("Select Artwork File", "All files: *.*, Normalized PDF: *.pdf, Adobe Illustrator: *.ai");
                     if (artworkSelected != null) {
                         okBtn.enabled = true;
-                        artworkFile = artworkSelected;
+                        artworkFile = artworkSelected; // globalna premenna = lokalna
                         artworkEdittext.text = artworkSelected.displayName;
                         artworkPreview (artworkSelected);
                     };
@@ -2842,14 +2842,18 @@ function makePreview () {
                 var jpgCheckBox = p1.g2.add("checkbox");
                     jpgCheckBox.value = true;
                 var jpgCheckBoxStatictext = p1.g2.add('statictext {text: "Export to JPG", justify: "left"}');
-        p1.g3 = p1.add("group");
-                var previewCheckBox = p1.g3.add("checkbox");
+                    jpgCheckBoxStatictext.characters = 10;
+                var previewCheckBox = p1.g2.add("checkbox");
                     previewCheckBox.value = false;
-                var previewCheckBoxStatictext = p1.g3.add('statictext {text: "Preview JPG", justify: "left"}');
-        p1.g4 = p1.add("group");
-                var closeCheckBox = p1.g4.add("checkbox");
+                var previewCheckBoxStatictext = p1.g2.add('statictext {text: "Preview JPG after export", justify: "left"}');
+        p1.g3 = p1.add("group");
+                var saveCheckBox = p1.g3.add("checkbox");
+                    saveCheckBox.value = false;
+                var saveCheckBoxStatictext = p1.g3.add('statictext {text: "Save One-Up", justify: "left"}');
+                    saveCheckBoxStatictext.characters = 10;
+                var closeCheckBox = p1.g3.add("checkbox");
                     closeCheckBox.value = true;
-                var closeCheckBoxStatictext = p1.g4.add('statictext {text: "Close document", justify: "left"}');
+                var closeCheckBoxStatictext = p1.g3.add('statictext {text: "Close document", justify: "left"}');
         
         var buttonGroup = w.add ('group {alignment: "right"}');
             var okBtn = buttonGroup.add ("button", undefined, "OK");
@@ -2861,6 +2865,9 @@ function makePreview () {
                     };
                     if (previewCheckBox.value) {
                         File(artworkSelected.fullName.substr(0, artworkSelected.fullName.indexOf(".")) + ".jpg").execute();
+                    };
+                    if (saveCheckBox.value) {
+                        myDocument.save(File(artworkSelected.fullName.substr(0, artworkSelected.fullName.indexOf(".")) + ".oneup.indd"));
                     };
                     if (closeCheckBox.value) {
                         myDocument.close(SaveOptions.NO);
@@ -2878,4 +2885,4 @@ function makePreview () {
 };
 //
 // TESTING
-
+//makePreview ();
