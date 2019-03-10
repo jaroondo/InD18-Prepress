@@ -1509,6 +1509,13 @@ function makeMixColor (colorName, inkList, tintList) { // vytvori a vrati novu m
     return result;
 };
 function cropMarkLogoNumber () { // vyfarbi orezove znacky, loga a cisla raznikov
+    var loadStyles = false;
+    if (artworkFile == undefined) {
+        artworkFile = app.activeDocument.fullName;
+    };
+    if (changeFileExtension (artworkFile, "-oneup.indd").exists) {
+        loadStyles = true;
+    };
     var posInk = egInks.getDarkest ("ink", "positiveInksFilterCondition");
     var posDensity = 0;
     if (posInk.length > 0) {posDensity = posInk[0].neutralDensity};
@@ -1526,17 +1533,25 @@ function cropMarkLogoNumber () { // vyfarbi orezove znacky, loga a cisla razniko
             myObjectStyle.itemByName("Logo").fillColor = fillColor;
             myObjectStyle.itemByName("Logo").overprintFill = true;
         setProgWinContent ("Punch Numbers...", 0, 3); pbar.value = 3; progWin.update();
-            myParagraphStyle.itemByName("PunchNumber").fillColor = fillColor;
-            myParagraphStyle.itemByName("PunchNumber").overprintFill = true;
+            if (loadStyles) {
+                loadOneupStyles ();
+            } else {
+                myParagraphStyle.itemByName("PunchNumber").fillColor = fillColor;
+                myParagraphStyle.itemByName("PunchNumber").overprintFill = true;
+            } ;
 	} else {
         setProgWinContent ("Crop Marks...", 0, 3); pbar.value = 1; progWin.update();
             myObjectStyle.itemByName("CutMarks").strokeColor = mySwatch[2];
         setProgWinContent ("Logos...", 0, 3); pbar.value = 2; progWin.update();
             myObjectStyle.itemByName("Logo").fillColor = mySwatch[2];
         setProgWinContent ("Punch Numbers...", 0, 3); pbar.value = 3; progWin.update();
-            myParagraphStyle.itemByName("PunchNumber").fillColor = mySwatch[1];
-            myParagraphStyle.itemByName("PunchNumber").fillTint = 0;
-            myParagraphStyle.itemByName("PunchNumber").overprintFill = false;
+            if (loadStyles) {
+                loadOneupStyles ();
+            } else {
+                myParagraphStyle.itemByName("PunchNumber").fillColor = mySwatch[1];
+                myParagraphStyle.itemByName("PunchNumber").fillTint = 0;
+                myParagraphStyle.itemByName("PunchNumber").overprintFill = false;
+            };
 	};
 };
 function removeUnusedSwatch () { //vyhodi vsetky swatch a nahradi ciernou
@@ -1639,7 +1654,7 @@ function loadJobPrefs () {
     jobPrefs = eval(jobPrefsFile.read());
     jobPrefsFile.close();
 };
-function jpgExport (artworkFile) {
+function jpgExport (workFile) {
     try {
         myDocument = app.activeDocument;
     } catch (myError) {
@@ -1657,7 +1672,7 @@ function jpgExport (artworkFile) {
     };
     myDocument.exportFile(
         ExportFormat.JPG,
-        File(artworkFile + ".jpg"),
+        workFile,
         false, 
         undefined
     );
@@ -1726,6 +1741,12 @@ function artworkPreview (artworkFile) {
             myParagraphStyle.itemByName("PunchNumber").fillTint = 0;
             myParagraphStyle.itemByName("PunchNumber").overprintFill = false;
 	};
+};
+function changeFileExtension (someFile, newExtension) { // newExtension = ".*"
+    return File(someFile.fullName.substr(0, someFile.fullName.indexOf(".")) + newExtension);
+};
+function loadOneupStyles () {
+    app.activeDocument.importStyles (ImportFormat.PARAGRAPH_STYLES_FORMAT, changeFileExtension (artworkFile, "-oneup.indd"), GlobalClashResolutionStrategy.LOAD_ALL_WITH_OVERWRITE); 
 };
 //
 // MENU
@@ -2707,6 +2728,7 @@ function jobWorkflow () {
     if (w.show () == 1) {
         if (editCheckBox.value == true) {
             var awFile = editOneUp (false);
+            artworkFile = awFile; // globalna premenna
             if (awFile == undefined) { return };
         };
         if (prepressCheckBox.value == true) {
@@ -2722,9 +2744,9 @@ function jobWorkflow () {
             myDocument.close();
         };
         if (thumbnailCheckBox.value == true) {
-            if (awFile != undefined) {
+            if (awFile != undefined) { // ak existuje urobit nahlad z oneup inak  ostava
                 artworkPreview (awFile);
-                jpgExport (File(awFile.fullName.substr(0, awFile.fullName.indexOf("."))));
+                jpgExport (changeFileExtension (awFile, ".jpg"));
                 app.activeDocument.close(SaveOptions.NO);
             } else {
                 makePreview ();
@@ -2835,12 +2857,16 @@ function makePreview () {
                         okBtn.enabled = true;
                         artworkFile = artworkSelected; // globalna premenna = lokalna
                         artworkEdittext.text = artworkSelected.displayName;
-                        artworkPreview (artworkSelected);
+                        artworkPreview (artworkFile);
                     };
                 };
         p1.g2 = p1.add("group");
                 var jpgCheckBox = p1.g2.add("checkbox");
                     jpgCheckBox.value = true;
+                    jpgCheckBox.onClick = function () {
+                        previewCheckBox.enabled = this.value;
+                        previewCheckBoxStatictext.enabled = this.value;
+                    };
                 var jpgCheckBoxStatictext = p1.g2.add('statictext {text: "Export to JPG", justify: "left"}');
                     jpgCheckBoxStatictext.characters = 10;
                 var previewCheckBox = p1.g2.add("checkbox");
@@ -2861,13 +2887,13 @@ function makePreview () {
             okBtn.onClick = function () {
                 if (artworkSelected != undefined) {
                     if (jpgCheckBox.value) {
-                        jpgExport (File(artworkFile.fullName.substr(0, artworkFile.fullName.indexOf("."))));
+                        jpgExport (changeFileExtension (artworkFile, ".jpg"));
                     };
                     if (previewCheckBox.value) {
-                        File(artworkSelected.fullName.substr(0, artworkSelected.fullName.indexOf(".")) + ".jpg").execute();
+                        changeFileExtension (artworkFile, ".jpg").execute();
                     };
                     if (saveCheckBox.value) {
-                        myDocument.save(File(artworkSelected.fullName.substr(0, artworkSelected.fullName.indexOf(".")) + ".oneup.indd"));
+                        myDocument.save(changeFileExtension (artworkFile, "-oneup.indd"));
                     };
                     if (closeCheckBox.value) {
                         myDocument.close(SaveOptions.NO);
@@ -2885,4 +2911,4 @@ function makePreview () {
 };
 //
 // TESTING
-//makePreview ();
+//jobWorkflow ();
