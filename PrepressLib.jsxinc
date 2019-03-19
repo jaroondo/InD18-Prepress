@@ -1718,29 +1718,7 @@ function artworkPreview (artworkFile) {
     //punch number
     getPageItem ("num00").contents = "0" + egInks.getInvertKey("name", "attribute", "technical").length.toString ();
     
-    var posInk = egInks.getDarkest ("ink", "positiveInksFilterCondition");
-    var posDensity = 0;
-    if (posInk.length > 0) {posDensity = posInk[0].neutralDensity};
-    var negInk = egInks.getDarkest ("ink", "negativeInksFilterCondition");
-    var negDensity = 0;
-    if (negInk.length > 0) {negDensity = negInk[0].neutralDensity};
-    var deltaD = Math.abs(posDensity - negDensity); //  rozdiel denzit
-    var posDensityTreshold = (posDensity / 100 * 25); // % prah pozitivnej denzity
-	if (posDensity > negDensity && deltaD > posDensityTreshold) { /* pozitivna je tmavsia ako negativna a rozdiel je vacsi ako 50% pozitivnej */
-        var fillColor = egInks.getDarkest ("swatch", "positiveInksFilterCondition")[0];
-            myObjectStyle.itemByName("CutMarks").strokeColor = fillColor;
-            myObjectStyle.itemByName("CutMarks").overprintStroke = true;
-            myObjectStyle.itemByName("Logo").fillColor = fillColor;
-            myObjectStyle.itemByName("Logo").overprintFill = true;
-            myParagraphStyle.itemByName("PunchNumber").fillColor = fillColor;
-            myParagraphStyle.itemByName("PunchNumber").overprintFill = true;
-	} else {
-            myObjectStyle.itemByName("CutMarks").strokeColor = mySwatch[2];
-            myObjectStyle.itemByName("Logo").fillColor = mySwatch[2];
-            myParagraphStyle.itemByName("PunchNumber").fillColor = mySwatch[1];
-            myParagraphStyle.itemByName("PunchNumber").fillTint = 0;
-            myParagraphStyle.itemByName("PunchNumber").overprintFill = false;
-	};
+    cropMarkLogoNumber ();
 };
 function changeFileExtension (someFile, newExtension) { // newExtension = ".*"
     return File(someFile.fullName.substr(0, someFile.fullName.indexOf(".")) + newExtension);
@@ -2911,4 +2889,4 @@ function makePreview () {
 };
 //
 // TESTING
-//jobWorkflow ();
+//makePreview ();
