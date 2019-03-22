@@ -37,7 +37,7 @@ var myMixedInksTintList = [];
 var myMixedInksList = [];
 var myTint = {};
 var egInks = new EgInks();
-var scaleStrip = new ScaleStrip();
+var scaleStrip = {};
 var progWin = createProgressWindow ();
 var message = progWin.children[0];
 var pbar = progWin.children[1];
@@ -46,6 +46,8 @@ var xmpLinkedFile = {};
 var myLinkedXmp = {};
 var jobPrefs = new JobPreferencies ();
 var jobPrefsFile = new File(imagesFolder + "JobPreferences.txt");
+var scalesCount = 26;
+
 //
 // OBJEKTY
 function PrintingPlate() { /*definicia objektu tlačiarenska platňa*/
@@ -1253,6 +1255,7 @@ function setDieCutPasser () { //nastaví kruhový passer
     };
 };
 function setSxObjectStyles () { // nastavi objektove styly S1 az Sn
+    scaleStrip = new ScaleStrip();
     var usedNames = egInks.filter("name", "usedInksFilterCondition"); // pole mien okrem technických
     var usedUnderPrints = egInks.filter("printingmethod", "usedInksFilterCondition"); // pole printingmethod okrem technických
     var usedSwatches = [];
@@ -1464,13 +1467,17 @@ function doubleInksCrossMark () { // vyfarbi skaly
         myObjectStyle.itemByName("Passer_1").overprintStroke = true;
     };
 };
-function colorScales() { // vyfarby farebnu skalu
+function colorScales(scalesCount) { // vyfarby farebnu skalu
+    if (scalesCount != 26) {
+        scalesCount = scaleStrip.length;
+    };
     var j = 1;
-    for (var i = 1; i <= 26; i++) { // priradi objektove styly
+    for (var i = 1; i <= scalesCount; i++) { // priradi objektove styly
        myDocument.pageItems.itemByName("scale" + i).applyObjectStyle(myDocument.objectStyles.itemByName("Scale" + j));
        j++;
        if (j > scaleStrip.length) {j = 1};
     };
+    scalesCount = 26;
 };
 function makeMixColor (colorName, inkList, tintList) { // vytvori a vrati novu mixovanu, spot alebo CMYK farbu
     var result = {};
@@ -1554,19 +1561,12 @@ function cropMarkLogoNumber () { // vyfarbi orezove znacky, loga a cisla razniko
             };
 	};
 };
-function removeUnusedSwatch () { //vyhodi vsetky swatch a nahradi ciernou
+function removeUnusedSwatch () { //vyhodi vsetky swatch
     var mySwatches = app.activeDocument.swatches;
-    var myLength = mySwatches.length;
-    var xName = "";
-    for (var i = 0; i < myLength; i++) {
-        xName = mySwatches[i].name
-        try {
-            mySwatches[i].remove(mySwatches[3]);
-            i--;
-            myLength--;
-            //$.writeln("vyhodene " + xName + " " + i +"/"+myLength);                
-        } catch (myError) {
-            //$.writeln("zostava " + xName + " " + i +"/"+myLength);
+    var unUsedSwatchesArr = app.activeDocument.unusedSwatches;
+    for (var i = 0; i < unUsedSwatchesArr.length - 1; i++) {
+        if (unUsedSwatchesArr[i].name != "") {
+            mySwatches.itemByID(unUsedSwatchesArr[i].id).remove();
         };
     };
 };
@@ -1709,16 +1709,17 @@ function artworkPreview (artworkFile) {
     //logo
     var logo = myLinkXmp.getProperty ("http://my.wbcSchema.namespace/", "logo").toString();
     if ( logo == "0" || logo == "-0") {
-        myDocument.layers.itemByName("logo CP").visible = false;
+        myDocument.layers.itemByName("Logos").visible = false;
     } else {
-        myDocument.layers.itemByName("logo CP").visible = true;
+        myDocument.layers.itemByName("Logos").visible = true;
     };
-    getPageItem ("LOGO").rotationAngle = Number(logo);
+    getPageItem ("logo1").rotationAngle = Number(logo);
     
     //punch number
-    getPageItem ("num00").contents = "0" + egInks.getInvertKey("name", "attribute", "technical").length.toString ();
+    getPageItem ("num1").contents = "0" + egInks.getInvertKey("name", "attribute", "technical").length.toString ();
     
-    cropMarkLogoNumber ();
+    scalesCount = 8;
+    prepressSetup (false);
 };
 function changeFileExtension (someFile, newExtension) { // newExtension = ".*"
     return File(someFile.fullName.substr(0, someFile.fullName.indexOf(".")) + newExtension);
