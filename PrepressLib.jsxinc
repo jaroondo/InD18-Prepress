@@ -1252,7 +1252,7 @@ function setDieCutPasser () { //nastaví kruhový passer
         } else {
             myObjectStyle.itemByName("DieCutMarks").strokeColor = mySwatch[2];
         };
-    };
+    }; 
 };
 function setSxObjectStyles () { // nastavi objektove styly S1 az Sn
     scaleStrip = new ScaleStrip();
@@ -1365,44 +1365,40 @@ function usedInksList () { // výpis použitých farieb
     };
 };
 function lowInksEater (gain) { // vyfarbi ink eater farbou s mensou spotrebou ako prah
-	var fillColor = egInks.compare("swatch", "frequency", "<=", gain);
-	if (fillColor.length == 0) {
-	    myObjectStyle.itemByName("InksEater").fillColor = mySwatch[0];
-	} else if (fillColor.length == 1) {
-	    myObjectStyle.itemByName("InksEater").fillColor = fillColor[0];
-	} else {
-	    var myMixedInksList = egInks.compare("ink", "frequency", "<=", gain);
-	    var myMixedInksTintList = egInks.compare("tint", "frequency", "<=", gain);
+    var fillColor = egInks.compare("swatch", "frequency", "<=", gain);
+    if (fillColor.length == 0) {
+        myObjectStyle.itemByName("InksEater").fillColor = mySwatch[0];
+    } else if (fillColor.length == 1) {
+        myObjectStyle.itemByName("InksEater").fillColor = fillColor[0];
+    } else {
+        var myMixedInksList = egInks.compare("ink", "frequency", "<=", gain);
+        var myMixedInksTintList = egInks.compare("tint", "frequency", "<=", gain);
         for (var i in myMixedInksTintList) {
             myMixedInksTintList[i] = 100;
         };
          if (myMixedInk.itemByName("InksEater") != null) {
             myMixedInk.itemByName("InksEater").remove();
          };
-	    //myMixedInk.add(myMixedInksList, myMixedInksTintList, {name:"InksEater"});
-	    //myObjectStyle.itemByName("InksEater").fillColor = mySwatch.itemByName("InksEater");
         myObjectStyle.itemByName("InksEater").fillColor = makeMixColor ("InksEater", myMixedInksList, myMixedInksTintList);
-	};
+    };
 };
 function negativeEater () { // vyfarbi neagtivne bocne pasy
-	var fillColor = egInks.filter("swatch", "negativeEaterFilterCondition");
-	if (fillColor.length == 0) {
-	    myObjectStyle.itemByName("NegativeInksEater").fillColor = mySwatch[0];
-	} else if (fillColor.length == 1) {
-	    myObjectStyle.itemByName("NegativeInksEater").fillColor = fillColor[0];
-	} else {
-	    var myMixedInksList = egInks.filter("ink", "negativeEaterFilterCondition");
-	    var myMixedInksTintList = egInks.filter("tint", "negativeEaterFilterCondition");
+    var fillColor = egInks.filter("swatch", "negativeEaterFilterCondition");
+    if (fillColor.length == 0) {
+        myObjectStyle.itemByName("NegativeInksEater").fillColor = mySwatch[0];
+    } else if (fillColor.length == 1) {
+        myObjectStyle.itemByName("NegativeInksEater").fillColor = fillColor[0];
+    } else {
+        var myMixedInksList = egInks.filter("ink", "negativeEaterFilterCondition");
+        var myMixedInksTintList = egInks.filter("tint", "negativeEaterFilterCondition");
         for (var i in myMixedInksTintList) {
             myMixedInksTintList[i] = 100;
         };
          if (myMixedInk.itemByName("NegativeInksEater") != null) {
             myMixedInk.itemByName("NegativeInksEater").remove();
          };
-	    //myMixedInk.add(myMixedInksList, myMixedInksTintList, {name:"NegativeInksEater"});
-	    //myObjectStyle.itemByName("NegativeInksEater").fillColor = mySwatch.itemByName("NegativeInksEater");
         myObjectStyle.itemByName("NegativeInksEater").fillColor = makeMixColor ("NegativeInksEater", myMixedInksList, myMixedInksTintList);
-	};
+    };
 };
 function lithoMark () { // vyfarbi litograficku znacku
     var lithoFillColor = [];
@@ -1441,8 +1437,6 @@ function doubleInksCrossMark () { // vyfarbi skaly
             myObjectStyle.itemByName("Passer").strokeColor = mySwatch[0];
             myMixedInk.itemByName("Passer").remove();
         };
-        //myMixedInk.add(strokeColorA, strokeTintA, {name:"Passer"});
-        //myObjectStyle.itemByName("Passer").strokeColor = mySwatch.itemByName("Passer");
         myObjectStyle.itemByName("Passer").strokeColor = makeMixColor ("Passer", strokeColorA, strokeTintA);
         myObjectStyle.itemByName("Passer").strokeWeight = 0.25;
     };
@@ -1460,14 +1454,12 @@ function doubleInksCrossMark () { // vyfarbi skaly
             myObjectStyle.itemByName("Passer_1").strokeColor = mySwatch[0];
             myMixedInk.itemByName("Passer_1").remove();
         };
-        //myMixedInk.add(strokeColorB, strokeTintB, {name:"Passer_1"});
-        //myObjectStyle.itemByName("Passer_1").strokeColor = mySwatch.itemByName("Passer_1");
         myObjectStyle.itemByName("Passer_1").strokeColor = makeMixColor ("Passer_1", strokeColorB, strokeTintB);
         myObjectStyle.itemByName("Passer_1").strokeWeight = 0.25;
         myObjectStyle.itemByName("Passer_1").overprintStroke = true;
     };
 };
-function colorScales(scalesCount) { // vyfarby farebnu skalu
+function colorScales() { // vyfarby farebnu skalu
     if (scalesCount != 26) {
         scalesCount = scaleStrip.length;
     };
@@ -1477,7 +1469,6 @@ function colorScales(scalesCount) { // vyfarby farebnu skalu
        j++;
        if (j > scaleStrip.length) {j = 1};
     };
-    scalesCount = 26;
 };
 function makeMixColor (colorName, inkList, tintList) { // vytvori a vrati novu mixovanu, spot alebo CMYK farbu
     var result = {};
@@ -1516,12 +1507,8 @@ function makeMixColor (colorName, inkList, tintList) { // vytvori a vrati novu m
     return result;
 };
 function cropMarkLogoNumber () { // vyfarbi orezove znacky, loga a cisla raznikov
-    var loadStyles = false;
     if (artworkFile == undefined) {
         artworkFile = app.activeDocument.fullName;
-    };
-    if (changeFileExtension (artworkFile, "-oneup.indd").exists) {
-        loadStyles = true;
     };
     var posInk = egInks.getDarkest ("ink", "positiveInksFilterCondition");
     var posDensity = 0;
@@ -1531,7 +1518,7 @@ function cropMarkLogoNumber () { // vyfarbi orezove znacky, loga a cisla razniko
     if (negInk.length > 0) {negDensity = negInk[0].neutralDensity};
     var deltaD = Math.abs(posDensity - negDensity); //  rozdiel denzit
     var posDensityTreshold = (posDensity / 100 * 25); // % prah pozitivnej denzity
-	if (posDensity > negDensity && deltaD > posDensityTreshold) { /* pozitivna je tmavsia ako negativna a rozdiel je vacsi ako 50% pozitivnej */
+    if (posDensity > negDensity && deltaD > posDensityTreshold) { /* pozitivna je tmavsia ako negativna a rozdiel je vacsi ako 50% pozitivnej */
         var fillColor = egInks.getDarkest ("swatch", "positiveInksFilterCondition")[0];
         setProgWinContent ("Crop Marks...", 0, 3); pbar.value = 1; progWin.update();
             myObjectStyle.itemByName("CutMarks").strokeColor = fillColor;
@@ -1540,26 +1527,18 @@ function cropMarkLogoNumber () { // vyfarbi orezove znacky, loga a cisla razniko
             myObjectStyle.itemByName("Logo").fillColor = fillColor;
             myObjectStyle.itemByName("Logo").overprintFill = true;
         setProgWinContent ("Punch Numbers...", 0, 3); pbar.value = 3; progWin.update();
-            if (loadStyles) {
-                loadOneupStyles ();
-            } else {
-                myParagraphStyle.itemByName("PunchNumber").fillColor = fillColor;
-                myParagraphStyle.itemByName("PunchNumber").overprintFill = true;
-            } ;
-	} else {
+            myParagraphStyle.itemByName("PunchNumber").fillColor = fillColor;
+            myParagraphStyle.itemByName("PunchNumber").overprintFill = true;
+    } else {
         setProgWinContent ("Crop Marks...", 0, 3); pbar.value = 1; progWin.update();
             myObjectStyle.itemByName("CutMarks").strokeColor = mySwatch[2];
         setProgWinContent ("Logos...", 0, 3); pbar.value = 2; progWin.update();
             myObjectStyle.itemByName("Logo").fillColor = mySwatch[2];
         setProgWinContent ("Punch Numbers...", 0, 3); pbar.value = 3; progWin.update();
-            if (loadStyles) {
-                loadOneupStyles ();
-            } else {
-                myParagraphStyle.itemByName("PunchNumber").fillColor = mySwatch[1];
-                myParagraphStyle.itemByName("PunchNumber").fillTint = 0;
-                myParagraphStyle.itemByName("PunchNumber").overprintFill = false;
-            };
-	};
+            myParagraphStyle.itemByName("PunchNumber").fillColor = mySwatch[1];
+            myParagraphStyle.itemByName("PunchNumber").fillTint = 0;
+            myParagraphStyle.itemByName("PunchNumber").overprintFill = false;
+    };
 };
 function removeUnusedSwatch () { //vyhodi vsetky swatch
     var mySwatches = app.activeDocument.swatches;
@@ -1720,12 +1699,16 @@ function artworkPreview (artworkFile) {
     
     scalesCount = 8;
     prepressSetup (false);
+    scalesCount = 26;
 };
 function changeFileExtension (someFile, newExtension) { // newExtension = ".*"
     return File(someFile.fullName.substr(0, someFile.fullName.indexOf(".")) + newExtension);
 };
 function loadOneupStyles () {
-    app.activeDocument.importStyles (ImportFormat.PARAGRAPH_STYLES_FORMAT, changeFileExtension (artworkFile, "-oneup.indd"), GlobalClashResolutionStrategy.LOAD_ALL_WITH_OVERWRITE); 
+    //app.active Document.loadSwatches (changeFileExtension (artworkFile, "-oneup.indd"));    
+    app.activeDocument.importStyles (ImportFormat.CHARACTER_STYLES_FORMAT, changeFileExtension (artworkFile, "-oneup.indd"), GlobalClashResolutionStrategy.LOAD_ALL_WITH_OVERWRITE);
+    app.activeDocument.importStyles (ImportFormat.PARAGRAPH_STYLES_FORMAT, changeFileExtension (artworkFile, "-oneup.indd"), GlobalClashResolutionStrategy.LOAD_ALL_WITH_OVERWRITE);
+    app.activeDocument.importStyles (ImportFormat.OBJECT_STYLES_FORMAT, changeFileExtension (artworkFile, "-oneup.indd"), GlobalClashResolutionStrategy.LOAD_ALL_WITH_OVERWRITE); 
 };
 //
 // MENU
@@ -2629,13 +2612,6 @@ function prepressSetup (doneAlert) { // nastavenie celeho pre-pressu
     myTint = myDocument.tints;
     scaleStrip = new ScaleStrip();
     
-    /*if (loadXMPLibrary()) { // read xml packet
-        myLinkedFile = File(app.activeDocument.links[0].filePath);
-        xmpLinkedFile = new XMPFile(myLinkedFile.fsName, XMPConst.UNKNOWN, XMPConst.OPEN_FOR_READ);
-        myLinkedXmp = xmpLinkedFile.getXMP();
-        xmpLinkedFile.closeFile(XMPConst.CLOSE_UPDATE_SAFELY);
-        unloadXMPLibrary();
-    };*/
     readXMPdata(app.activeDocument.links[0].filePath);
     
     progWin.text = "Prepress Setup...";
@@ -2650,23 +2626,29 @@ function prepressSetup (doneAlert) { // nastavenie celeho pre-pressu
     setProgWinContent ("Used Inks", 0, 2); pbar.value = 1; progWin.update();
         clearCxVariables (); pbar.value = 2; progWin.update();
         usedInksList ();
-    setProgWinContent ("Die Cut Passer", 0, 1); pbar.value = 1; progWin.update();
-        setDieCutPasser (); // myObjectStyle.itemByName("DieCutMarks")
-    setProgWinContent ("Low Inks Eater", 0, 1); pbar.value = 1; progWin.update();
-        lowInksEater (6); // myObjectStyle.itemByName("InksEater")
-    setProgWinContent ("Negative Inks Eater", 0, 1); pbar.value = 1; progWin.update();    
-        negativeEater (); // myObjectStyle.itemByName("NegativeInksEater")
-    setProgWinContent ("Litho Mark", 0, 1); pbar.value = 1; progWin.update();    
-        lithoMark (); // myObjectStyle.itemByName("LithoMark")
-    setProgWinContent ("Passer Cross Marks", 0, 1); pbar.value = 1; progWin.update();    
-        doubleInksCrossMark (); // myObjectStyle.itemByName("Passer"); ("Passer_1")
-    //setProgWinContent ("Crop Marks, Logos, Punch Numbers", 0, 1); pbar.value = 0; progWin.update();    
-        cropMarkLogoNumber (); //myObjectStyle.itemByName("CutMarks"); ("Logo"); myParagraphStyle.itemByName("PunchNumber")
+    if (changeFileExtension (artworkFile, "-oneup.indd").exists) {
+        setProgWinContent ("Load One-Up Styles", 0, 1); pbar.value = 1; progWin.update();
+            loadOneupStyles();
+    } else {
+        setProgWinContent ("Die Cut Passer", 0, 1); pbar.value = 1; progWin.update();
+            setDieCutPasser ();
+        setProgWinContent ("Low Inks Eater", 0, 1); pbar.value = 1; progWin.update();
+            lowInksEater (6);
+        setProgWinContent ("Negative Inks Eater", 0, 1); pbar.value = 1; progWin.update();    
+            negativeEater ();
+        setProgWinContent ("Litho Mark", 0, 1); pbar.value = 1; progWin.update();    
+            lithoMark ();
+        setProgWinContent ("Passer Cross Marks", 0, 1); pbar.value = 1; progWin.update();    
+            doubleInksCrossMark ();
+        //setProgWinContent ("Crop Marks, Logos, Punch Numbers", 0, 1); pbar.value = 0; progWin.update();    
+            cropMarkLogoNumber ();
+    };
     setProgWinContent ("Color Scales", 0, 2); pbar.value = 1; progWin.update();
-        setSxObjectStyles (); // myDocument.objectStyles.itemByName("Scale" + j); 
+        setSxObjectStyles (); 
         pbar.value = 2; progWin.update();
         colorScales ();
     progWin.hide();
+    
     if (doneAlert) {
         alert("Document pre-press setting-up was executed successfully...");
     };
