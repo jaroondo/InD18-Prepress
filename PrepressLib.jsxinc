@@ -1367,7 +1367,7 @@ function usedInksList () { // výpis použitých farieb
 function lowInksEater (gain) { // vyfarbi ink eater farbou s mensou spotrebou ako prah
     var fillColor = egInks.compare("swatch", "frequency", "<=", gain);
     if (fillColor.length == 0) {
-        myObjectStyle.itemByName("InksEater").fillColor = mySwatch[0];
+        myObjectStyle.itemByName("InksEater").fillColor = mySwatch[2];
     } else if (fillColor.length == 1) {
         myObjectStyle.itemByName("InksEater").fillColor = fillColor[0];
     } else {
