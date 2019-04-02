@@ -1678,6 +1678,9 @@ function artworkPreview (artworkFile) {
     readXMPdata(myDocument.links[0].filePath);
     setEgInks ();
     
+    // artwork angle
+    getPageItem ("bleed1").rotationAngle = Number(getXMPproperty ("http://my.prepressSchema.namespace/", "artworkAngle", 0));
+    
     //primer
     if (myLinkXmp.getProperty ("http://my.wbcSchema.namespace/", "primer").toString().search(/White/i) != -1) {
         myDocument.layers.itemByName("basecoat").visible = false;
@@ -1687,15 +1690,21 @@ function artworkPreview (artworkFile) {
 
     //logo
     var logo = myLinkXmp.getProperty ("http://my.wbcSchema.namespace/", "logo").toString();
-    if ( logo == "0" || logo == "-0") {
+    if ( Math.abs(logo) == 0) { 
         myDocument.layers.itemByName("Logos").visible = false;
     } else {
         myDocument.layers.itemByName("Logos").visible = true;
+        getPageItem ("logo1").rotationAngle = Number(logo) + Number(getXMPproperty ("http://my.prepressSchema.namespace/", "punchNumAngle", 0));
     };
-    getPageItem ("logo1").rotationAngle = Number(logo);
     
     //punch number
-    getPageItem ("num1").contents = "0" + egInks.getInvertKey("name", "attribute", "technical").length.toString ();
+    if (getXMPproperty ("http://my.prepressSchema.namespace/", "punchNumPrint", true) == "False") {
+        myDocument.layers.itemByName("PunchNumbers").visible = false;
+    } else {
+        myDocument.layers.itemByName("PunchNumbers").visible = true;
+        getPageItem ("num1").contents = "0" + egInks.getInvertKey("name", "attribute", "technical").length.toString ();
+    getPageItem ("num1").rotationAngle = Number(getXMPproperty ("http://my.prepressSchema.namespace/", "punchNumAngle", 0)) +180;
+    };
     
     scalesCount = 8;
     prepressSetup (false);
