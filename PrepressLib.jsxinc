@@ -1658,57 +1658,76 @@ function jpgExport (workFile) {
 };
 function artworkPreview (artworkFile) {
     loadJobPrefs ();
-    app.open(jobPrefs.defaultPreviewTemplateFile);
-    myDocument = app.activeDocument;
-    myDocument.layoutWindows[0].overprintPreview = true;
-    myDocument.links[0].relink(artworkFile);
+    if (changeFileExtension (artworkFile, "-oneup.indd").exists) {
+        app.open(changeFileExtension (artworkFile, "-oneup.indd"));
+        myDocument = app.activeDocument;
+        myDocument.layoutWindows[0].overprintPreview = true;
+    } else {
+        app.open(jobPrefs.defaultPreviewTemplateFile);
+        myDocument = app.activeDocument;
+        myDocument.layoutWindows[0].overprintPreview = true;
+        myDocument.links[0].relink(artworkFile);     
+        mySwatch = myDocument.swatches;
+        myColor = myDocument.colors;
+        myObjectStyle = myDocument.objectStyles;
+        myParagraphStyle = myDocument.paragraphStyles;
+        myCharacterStyle = myDocument.characterStyles;
+        myTextVariable = myDocument.textVariables;
+        myLinkXmp = myDocument.links[0].linkXmp;
+        myXmpInksCount = myLinkXmp.countContainer("http://ns.esko-graphics.com/grinfo/1.0/","inks");
+        myMixedInk = myDocument.mixedInks;
+        myInk = myDocument.inks;
+        myTint = myDocument.tints;
+        readXMPdata(myDocument.links[0].filePath);
+        setEgInks ();
+        
+        //primer
+        if (myLinkXmp.getProperty ("http://my.wbcSchema.namespace/", "primer").toString().search(/White/i) != -1) {
+            myDocument.layers.itemByName("basecoat").visible = false;
+        } else {
+            myDocument.layers.itemByName("basecoat").visible = true;
+        };    
+        
+        var oh = {};
+        //oh = eval(myDocument.extractLabel("oneUp"));
+        oh.artworkFile = File(myDocument.links[0].filePath);     
+        
+        // artwork angle
+        oh.artworkAngle = Number(getXMPproperty ("http://my.prepressSchema.namespace/", "artworkAngle", 0));
+        getPageItem ("bleed1").rotationAngle = oh.artworkAngle;
 
-    mySwatch = myDocument.swatches;
-    myColor = myDocument.colors;
-    myObjectStyle = myDocument.objectStyles;
-    myParagraphStyle = myDocument.paragraphStyles;
-    myCharacterStyle = myDocument.characterStyles;
-    myTextVariable = myDocument.textVariables;
-    myLinkXmp = myDocument.links[0].linkXmp;
-    myXmpInksCount = myLinkXmp.countContainer("http://ns.esko-graphics.com/grinfo/1.0/","inks");
-    myMixedInk = myDocument.mixedInks;
-    myInk = myDocument.inks;
-    myTint = myDocument.tints;
-    
-    readXMPdata(myDocument.links[0].filePath);
-    setEgInks ();
-    
-    // artwork angle
-    getPageItem ("bleed1").rotationAngle = Number(getXMPproperty ("http://my.prepressSchema.namespace/", "artworkAngle", 0));
-    
-    //primer
-    if (myLinkXmp.getProperty ("http://my.wbcSchema.namespace/", "primer").toString().search(/White/i) != -1) {
-        myDocument.layers.itemByName("basecoat").visible = false;
-    } else {
-        myDocument.layers.itemByName("basecoat").visible = true;
-    };
+        //logo
+        var logo = myLinkXmp.getProperty ("http://my.wbcSchema.namespace/", "logo").toString();
+        if ( Math.abs(logo) == 0) { 
+            oh.logoVisible = false;
+            myDocument.layers.itemByName("Logos").visible = oh.logoVisible;
+            oh.logoAngle = -56.5;
+        } else {
+            oh.logoVisible = true;
+            myDocument.layers.itemByName("Logos").visible = oh.logoVisible;
+            oh.logoAngle = Number(logo) + Number(getXMPproperty ("http://my.prepressSchema.namespace/", "punchNumAngle", -56.5));
+            getPageItem ("logo1").rotationAngle = oh.logoAngle;
+        };
+        
+        //punch number
+        if (getXMPproperty ("http://my.prepressSchema.namespace/", "punchNumPrint", true) == "False") {;
+            oh.punchNumVisible = false;
+            myDocument.layers.itemByName("PunchNumbers").visible = oh.punchNumVisible;
+            oh.punchNumAngle = 0;
+        } else {
+            oh.punchNumVisible = true;
+            myDocument.layers.itemByName("PunchNumbers").visible = oh.punchNumVisible;
+            getPageItem ("num1").contents = "0" + egInks.getInvertKey("name", "attribute", "technical").length.toString ();
+            oh.punchNumAngle = Number(getXMPproperty ("http://my.prepressSchema.namespace/", "punchNumAngle", 0));
+            getPageItem ("num1").rotationAngle = oh.punchNumAngle +180;
+        };
 
-    //logo
-    var logo = myLinkXmp.getProperty ("http://my.wbcSchema.namespace/", "logo").toString();
-    if ( Math.abs(logo) == 0) { 
-        myDocument.layers.itemByName("Logos").visible = false;
-    } else {
-        myDocument.layers.itemByName("Logos").visible = true;
-        getPageItem ("logo1").rotationAngle = Number(logo) + Number(getXMPproperty ("http://my.prepressSchema.namespace/", "punchNumAngle", 0));
+        myDocument.insertLabel("oneUp", oh.toSource());
+        
+        scalesCount = 8;
+        prepressSetup (false);
+        scalesCount = 26;
     };
-    
-    //punch number
-    if (getXMPproperty ("http://my.prepressSchema.namespace/", "punchNumPrint", true) == "False") {
-        myDocument.layers.itemByName("PunchNumbers").visible = false;
-    } else {
-        myDocument.layers.itemByName("PunchNumbers").visible = true;
-        getPageItem ("num1").contents = "0" + egInks.getInvertKey("name", "attribute", "technical").length.toString ();
-    getPageItem ("num1").rotationAngle = Number(getXMPproperty ("http://my.prepressSchema.namespace/", "punchNumAngle", 0)) +180;
-    };
-    
-    scalesCount = 8;
-    prepressSetup (false);
-    scalesCount = 26;
 };
 function changeFileExtension (someFile, newExtension) { // newExtension = ".*"
     return File(someFile.fullName.substr(0, someFile.fullName.indexOf(".")) + newExtension);
@@ -2827,6 +2846,7 @@ function makePreview () {
                         okBtn.enabled = true;
                         artworkFile = artworkSelected; // globalna premenna = lokalna
                         artworkEdittext.text = artworkSelected.displayName;
+                        saveCheckBox.value = changeFileExtension (artworkFile, "-oneup.indd").exists;
                         artworkPreview (artworkFile);
                     };
                 };
