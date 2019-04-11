@@ -1738,6 +1738,19 @@ function loadOneupStyles () {
     app.activeDocument.importStyles (ImportFormat.PARAGRAPH_STYLES_FORMAT, changeFileExtension (artworkFile, "-oneup.indd"), GlobalClashResolutionStrategy.LOAD_ALL_WITH_OVERWRITE);
     app.activeDocument.importStyles (ImportFormat.OBJECT_STYLES_FORMAT, changeFileExtension (artworkFile, "-oneup.indd"), GlobalClashResolutionStrategy.LOAD_ALL_WITH_OVERWRITE); 
 };
+function insertOneupLabel () {
+    var myDocument = app.activeDocument;
+    var oh = eval(myDocument.extractLabel("oneUp"));
+    
+    oh.artworkFile = File(myDocument.links[0].filePath);
+    oh.artworkAngle = getPageItem ("bleed1").rotationAngle;
+    oh.logoVisible = myDocument.layers.itemByName("Logos").visible;
+    oh.logoAngle = getPageItem ("logo1").rotationAngle;
+    oh.punchNumVisible = myDocument.layers.itemByName("PunchNumbers").visible;
+    oh.punchNumAngle = getPageItem ("num1").rotationAngle -180;
+    
+    myDocument.insertLabel("oneUp", oh.toSource());
+};
 //
 // MENU
 function prePressMenu () { // Prepress Menu
@@ -2685,30 +2698,22 @@ function jobWorkflow () {
     var w = new Window ("dialog", "Job Workflow...");
         w.alignChildren = "left";
         var p1 = w.add ('panel {text: "", borderstyle: "gray", alignChildren: "fill", alignment: "fill"}');
-            p1.g1 = p1.add("group");
-                var editCheckBox = p1.g1.add("checkbox");
+            p1.g1 = p1.add("group", undefined);
+                p1.g1.orientation = "column";
+                p1.g1.alignChildren = "left";
+                
+                var editCheckBox = p1.g1.add("checkbox", undefined, "Edit One-Up");
                     editCheckBox.value = true;
-                var editCheckBoxStatictext = p1.g1.add('statictext {text: "Edit One-Up", justify: "left"}');
-           p1.g2 = p1.add("group");
-                var prepressCheckBox = p1.g2.add("checkbox");
+                var prepressCheckBox = p1.g1.add("checkbox", undefined, "Prepress Set-Up");
                     prepressCheckBox.value = true;
-                var prepressCheckBoxStatictext = p1.g2.add('statictext {text: "Prepress Set-Up", justify: "left"}');
-           p1.g3 = p1.add("group");     
-                var saveJobCheckBox = p1.g3.add("checkbox");
+                var saveJobCheckBox = p1.g1.add("checkbox", undefined, "Save Job As");
                     saveJobCheckBox.value = true;
-                var saveJobCheckBoxStatictext = p1.g3.add('statictext {text: "Save Job As", justify: "left"}');
-           p1.g4 = p1.add("group");     
-                var pdfExpCheckBox = p1.g4.add("checkbox");
+                var pdfExpCheckBox = p1.g1.add("checkbox", undefined, "Export to PDF");
                     pdfExpCheckBox.value = true;
-                var pdfExpCheckBoxStatictext = p1.g4.add('statictext {text: "Export to PDF", justify: "left"}');
-           p1.g5 = p1.add("group");     
-                var closeCheckBox = p1.g5.add("checkbox");
+                var closeCheckBox = p1.g1.add("checkbox", undefined, "Close document");
                     closeCheckBox.value = true;
-                var closeCheckBoxStatictext = p1.g5.add('statictext {text: "Close document", justify: "left"}');
-           p1.g6 = p1.add("group");     
-                var thumbnailCheckBox = p1.g6.add("checkbox");
+                var thumbnailCheckBox = p1.g1.add("checkbox", undefined, "Artwork JPG thumbnail");
                     thumbnailCheckBox.value = true;
-                var thumbnailCheckBoxStatictext = p1.g6.add('statictext {text: "Artwork JPG thumbnail", justify: "left"}');
                 
         var buttonGroup = w.add ('group {alignment: "right"}');
             buttonGroup.add ("button", undefined, "OK");
@@ -2835,8 +2840,7 @@ function makePreview () {
         w.alignChildren = "left";
         var p1 = w.add ('panel {text: "Artwork", borderstyle: "gray", alignChildren: "fill", alignment: "fill"}');
             p1.g1 = p1.add("group");
-                var artworkStatictext = p1.g1.add('statictext {text: "Selected File: ", justify: "left"}');
-                    artworkStatictext.characters = 8;
+                p1.g1.add('statictext {text: "Selected File: ", justify: "left", characters: 8}');
                 var artworkEdittext = p1.g1.add("edittext", undefined,   "Please select artwork file...", {readonly: true, justify: "left"});
                     artworkEdittext.characters = 50;
                 var artworkBtn = p1.g1.add ("button", undefined, "Select");
@@ -2851,25 +2855,19 @@ function makePreview () {
                     };
                 };
         p1.g2 = p1.add("group");
-                var jpgCheckBox = p1.g2.add("checkbox");
+                var jpgCheckBox = p1.g2.add("checkbox", undefined, "Export to JPG");
                     jpgCheckBox.value = true;
                     jpgCheckBox.onClick = function () {
                         previewCheckBox.enabled = this.value;
                         previewCheckBoxStatictext.enabled = this.value;
                     };
-                var jpgCheckBoxStatictext = p1.g2.add('statictext {text: "Export to JPG", justify: "left"}');
-                    jpgCheckBoxStatictext.characters = 10;
-                var previewCheckBox = p1.g2.add("checkbox");
+                var previewCheckBox = p1.g2.add("checkbox", undefined, "Preview JPG after export");
                     previewCheckBox.value = false;
-                var previewCheckBoxStatictext = p1.g2.add('statictext {text: "Preview JPG after export", justify: "left"}');
         p1.g3 = p1.add("group");
-                var saveCheckBox = p1.g3.add("checkbox");
+                var saveCheckBox = p1.g3.add("checkbox",undefined, "Save One-Up");
                     saveCheckBox.value = false;
-                var saveCheckBoxStatictext = p1.g3.add('statictext {text: "Save One-Up", justify: "left"}');
-                    saveCheckBoxStatictext.characters = 10;
-                var closeCheckBox = p1.g3.add("checkbox");
+                var closeCheckBox = p1.g3.add("checkbox", undefined, "Close document");
                     closeCheckBox.value = true;
-                var closeCheckBoxStatictext = p1.g3.add('statictext {text: "Close document", justify: "left"}');
         
         var buttonGroup = w.add ('group {alignment: "right"}');
             var okBtn = buttonGroup.add ("button", undefined, "OK");
@@ -2883,6 +2881,7 @@ function makePreview () {
                         changeFileExtension (artworkFile, ".jpg").execute();
                     };
                     if (saveCheckBox.value) {
+                        insertOneupLabel ();
                         myDocument.save(changeFileExtension (artworkFile, "-oneup.indd"));
                     };
                     if (closeCheckBox.value) {
@@ -2902,3 +2901,4 @@ function makePreview () {
 //
 // TESTING
 //makePreview ();
+//jobWorkflow ();
