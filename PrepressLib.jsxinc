@@ -1738,18 +1738,79 @@ function loadOneupStyles () {
     app.activeDocument.importStyles (ImportFormat.PARAGRAPH_STYLES_FORMAT, changeFileExtension (artworkFile, "-oneup.indd"), GlobalClashResolutionStrategy.LOAD_ALL_WITH_OVERWRITE);
     app.activeDocument.importStyles (ImportFormat.OBJECT_STYLES_FORMAT, changeFileExtension (artworkFile, "-oneup.indd"), GlobalClashResolutionStrategy.LOAD_ALL_WITH_OVERWRITE); 
 };
-function insertOneupLabel () {
+function insertOneupLabel () { 
     var myDocument = app.activeDocument;
     var oh = eval(myDocument.extractLabel("oneUp"));
     
     oh.artworkFile = File(myDocument.links[0].filePath);
     oh.artworkAngle = getPageItem ("bleed1").rotationAngle;
-    oh.logoVisible = myDocument.layers.itemByName("Logos").visible;
-    oh.logoAngle = getPageItem ("logo1").rotationAngle;
     oh.punchNumVisible = myDocument.layers.itemByName("PunchNumbers").visible;
-    oh.punchNumAngle = getPageItem ("num1").rotationAngle -180;
+    oh.punchNumAngle = getPageItem ("num1").rotationAngle - 180;
+    oh.logoVisible = myDocument.layers.itemByName("Logos").visible;
+    oh.logoAngle = getPageItem ("logo1").rotationAngle - oh.punchNumAngle;
     
     myDocument.insertLabel("oneUp", oh.toSource());
+};
+function getOneupData (artworkFile) {
+    var result = undefined;
+    if (changeFileExtension (artworkFile, "-oneup.indd").exists) {
+        app.open(changeFileExtension (artworkFile, "-oneup.indd"),false); //nevie otvorit pokial je aktivny dialog
+        var myDoc = app.documents.lastItem();
+        result = eval(myDoc.extractLabel("oneUp"));
+        myDoc.close(SaveOptions.NO);
+    };
+    return result;
+};
+function loadOneup (ou) {
+    loadJobPrefs ();
+    app.open(jobPrefs.defaultTopTemplateFile);
+    
+    myDocument = app.activeDocument;
+    app.activeWindow.transformReferencePoint = AnchorPoint.CENTER_ANCHOR; // nastavi referencny bod na stred
+    
+    dh = eval(myDocument.extractLabel("dh"));
+    dh.artworkFile = ou.artworkFile;
+    dh.artworkAngle = ou.artworkAngle;
+    dh.punchNumAngle = ou.punchNumAngle;
+    dh.logoAngle = ou.logoAngle;
+    
+    progWin.text = "One-Up editting...";
+        progWin.show();
+        dieSet = new DieSet();
+        dieSet.masterOneUp.cutDiameter = dh.cutDiameter;
+        dieSet.masterOneUp.bleedDiameter = dh.bleedDiameter;
+        dieSet.punchDieCount = dh.punchDieCount;
+        dieSet.punchHorizontalOffset = dh.dieHorizontalOffset;
+        dieSet.punchVerticalOffset = dh.dieVerticalOffset;
+        dieSet.topPunchNumber = dh.topDieNumber;
+        dieSet.punchStepCount = dh.punchStepCount;
+        dieSet.punchStepWidth = dh.punchStepWidth;
+        artworkFile = dh.artworkFile;
+        artworkRotationAngle = dh.artworkAngle;
+        dieSet.fillDieSet();
+        
+        relinkArtwork (dh.artworkFile);
+        
+        if (dh.artworkAngle != 0) {
+            rotateArtwork(dh.artworkAngle);
+        };
+        if (ou.punchNumVisible == true && dh.punchNumAngle != 0) {
+            rotatePunchNumbers(dh.punchNumAngle);
+            if (ou.logoVisible == false) {
+                rotateLogos(dh.logoAngle + dh.punchNumAngle);
+            };
+        };
+        if (ou.logoVisible == true && dh.logoAngle != -56.5) {
+            rotateLogos(dh.logoAngle + dh.punchNumAngle);
+        };
+        app.activeDocument.layers.itemByName("PunchNumbers").printable = ou.punchNumVisible;
+        app.activeDocument.layers.itemByName("PunchNumbers").visible = ou.punchNumVisible;
+        app.activeDocument.layers.itemByName("Logos").printable = ou.logoVisible;
+        app.activeDocument.layers.itemByName("Logos").visible = ou.logoVisible;
+        // logo z kniznice
+        myDocument.insertLabel("dieSet", dieSet.toSource());       
+        myDocument.insertLabel("dh", dh.toSource());
+    progWin.hide();
 };
 //
 // MENU
@@ -2333,6 +2394,7 @@ function editOneUp (doneAlert) {
                         if (loadFile != null) {
                             dh.artworkFile = loadFile;
                             artworkName.text = dh.artworkFile.displayName;
+                            
                             // nacita XMP data do formulara
                             readXMPdata (dh.artworkFile);
                             if (artworkAngle.text != getXMPproperty ("http://my.prepressSchema.namespace/", "artworkAngle", 0)) {
@@ -2695,6 +2757,9 @@ function prepressSetup (doneAlert) { // nastavenie celeho pre-pressu
     };
 };
 function jobWorkflow () {
+    var awFile = selectArtwork ();
+    if (awFile == undefined) { return };
+    var oh = getOneupData (awFile);
     var w = new Window ("dialog", "Job Workflow...");
         w.alignChildren = "left";
         var p1 = w.add ('panel {text: "", borderstyle: "gray", alignChildren: "fill", alignment: "fill"}');
@@ -2702,18 +2767,21 @@ function jobWorkflow () {
                 p1.g1.orientation = "column";
                 p1.g1.alignChildren = "left";
                 
-                var editCheckBox = p1.g1.add("checkbox", undefined, "Edit One-Up");
+                var editCheckBox = p1.g1.add("checkbox");
+                    editCheckBox.text = (oh == undefined) ? "Edit One-Up":"Load One-Up";
                     editCheckBox.value = true;
+                    editCheckBox.enabled = false;
                 var prepressCheckBox = p1.g1.add("checkbox", undefined, "Prepress Set-Up");
                     prepressCheckBox.value = true;
+                    prepressCheckBox.enabled = true;
                 var saveJobCheckBox = p1.g1.add("checkbox", undefined, "Save Job As");
-                    saveJobCheckBox.value = true;
+                    saveJobCheckBox.value = (changeFileExtension (awFile, ".indd").exists) ? false:true;
                 var pdfExpCheckBox = p1.g1.add("checkbox", undefined, "Export to PDF");
-                    pdfExpCheckBox.value = true;
+                    pdfExpCheckBox.value = (changeFileExtension (awFile, ".indd.pdf").exists) ? false:true;
                 var closeCheckBox = p1.g1.add("checkbox", undefined, "Close document");
                     closeCheckBox.value = true;
                 var thumbnailCheckBox = p1.g1.add("checkbox", undefined, "Artwork JPG thumbnail");
-                    thumbnailCheckBox.value = true;
+                    thumbnailCheckBox.value = (changeFileExtension (awFile, ".jpg").exists) ? false:true;
                 
         var buttonGroup = w.add ('group {alignment: "right"}');
             buttonGroup.add ("button", undefined, "OK");
@@ -2721,9 +2789,13 @@ function jobWorkflow () {
     
     if (w.show () == 1) {
         if (editCheckBox.value == true) {
-            var awFile = editOneUp (false);
-            artworkFile = awFile; // globalna premenna
-            if (awFile == undefined) { return };
+            if (oh != undefined) {
+                loadOneup (oh);
+            } else {
+                awFile = editOneUp (false);
+                artworkFile = awFile; // globalna premenna
+                if (awFile == undefined) { return };
+            };
         };
         if (prepressCheckBox.value == true) {
             prepressSetup (false);
@@ -2835,6 +2907,7 @@ function jobPreferencies () {
 };
 function makePreview () {
     loadJobPrefs ();
+    artworkFile = undefined;
     var artworkSelected;
     var w = new Window ("palette", "Artwork preview...");
         w.alignChildren = "left";
@@ -2898,7 +2971,35 @@ function makePreview () {
 
         w.show();
 };
+function selectArtwork () {
+    loadJobPrefs ();
+    var artworkSelected;
+    var w = new Window ("dialog", "Select Artwork...");
+        w.alignChildren = "left";
+        var p1 = w.add ('panel {text: "", borderstyle: "gray", alignChildren: "fill", alignment: "fill"}');
+            p1.g1 = p1.add("group");
+                p1.g1.add('statictext {text: "Selected File: ", justify: "left", characters: 8}');
+                var artworkEdittext = p1.g1.add("edittext", undefined,   "Please select artwork file...", {readonly: true, justify: "left"});
+                    artworkEdittext.characters = 50;
+                var artworkBtn = p1.g1.add ("button", undefined, "Select");
+                artworkBtn.onClick = function () {
+                    artworkSelected = jobPrefs.jobsRootFolder.openDlg ("Select Artwork File", "All files: *.*, Normalized PDF: *.pdf, Adobe Illustrator: *.ai");
+                    if (artworkSelected != null) {
+                        okBtn.enabled = true;
+                        artworkFile = artworkSelected; // globalna premenna = lokalna
+                        artworkEdittext.text = artworkSelected.displayName;
+                    };
+                };
+                
+        var buttonGroup = w.add ('group {alignment: "right"}');
+            var okBtn = buttonGroup.add ("button", undefined, "OK");
+                okBtn.enabled = false;
+            buttonGroup.add ("button", undefined, "Cancel");
+    
+    if (w.show () == 1) {
+        return artworkFile;
+    };
+};
 //
 // TESTING
-//makePreview ();
 //jobWorkflow ();
