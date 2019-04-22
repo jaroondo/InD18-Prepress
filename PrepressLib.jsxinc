@@ -3000,6 +3000,358 @@ function selectArtwork () {
         return artworkFile;
     };
 };
+function loadOrEditOneUp (doneAlert) {
+    loadJobPrefs ();
+
+    var docToOpen = jobPrefs.jobsRootFolder.openDlg ("Select Artwork File");
+    if (docToOpen != null) {
+        var oh = getOneupData (docToOpen);
+        app.open(jobPrefs.defaultTopTemplateFile);
+    } else {
+        alert("You have not choosen any artwork...");
+        return;
+    };
+
+    myDocument = app.activeDocument;
+    app.activeWindow.transformReferencePoint = AnchorPoint.CENTER_ANCHOR; // nastavi referencny bod na stred
+    function getCheckBoxState (chkBox) {
+        var result = chkBox.value;
+        return result;
+    };
+    var w = new Window ("dialog", "Load and Edit One-Up...");
+        w.alignChildren = "left";
+        var tpanel = w.add ("group");        
+        var artworkTab = tpanel.add ("group");
+            artworkTab.orientation = "row";
+        var p4 = artworkTab.add('panel {text: "", borderstyle: "gray", alignChildren: "fill", alignment: "fill"}');
+            p4.g1 = p4.add("group");
+                var artworkNameCheckBox = p4.g1.add("checkbox");
+                    artworkNameCheckBox.value = (oh != undefined) ? true:false;
+                    artworkNameCheckBox.onClick = function () {
+                        artworkNameStatictext.enabled = getCheckBoxState (artworkNameCheckBox);
+                        artworkName.enabled = getCheckBoxState (artworkNameCheckBox);
+                        loadArtworkBtn.enabled = getCheckBoxState (artworkNameCheckBox);
+                    };
+                var artworkNameStatictext = p4.g1.add('statictext {text: "Artwork: ", justify: "left"}');
+                    artworkNameStatictext.enabled = getCheckBoxState (artworkNameCheckBox);
+                var artworkName = p4.g1.add("edittext", undefined,  dh.artworkFile.displayName, {readonly: true, justify: "left"});
+                    artworkName.characters = 35;
+                    artworkName.enabled = getCheckBoxState (artworkNameCheckBox);
+                var loadArtworkBtn = p4.g1.add ("button", undefined, "Select");
+                    loadArtworkBtn.enabled = (oh != undefined) ? false:getCheckBoxState (artworkNameCheckBox);
+                    loadArtworkBtn.onClick = function () {
+                        var loadFile =  jobPrefs.jobsRootFolder.openDlg ("Load artwork file", "PDF: *.pdf, All files: *.*");
+                        if (loadFile != null) {
+                            oh = getOneupData (loadFile); //nevie otvorit pokial je aktivny dialog
+                            dh.artworkFile = loadFile;
+                            artworkName.text = dh.artworkFile.displayName;
+                            
+                            // nacita XMP data do formulara
+                            readXMPdata (dh.artworkFile);
+                            var artworkAngleSource = (oh != undefined) ? oh.artworkAngle:getXMPproperty ("http://my.prepressSchema.namespace/", "artworkAngle", 0);
+                            if (artworkAngle.text != artworkAngleSource) {
+                                artworkAngleCheckBox.value = true;
+                                artworkAngleStatictext.enabled = getCheckBoxState (artworkAngleCheckBox);
+                                artworkAngle.enabled = getCheckBoxState (artworkAngleCheckBox);
+                                artworkAngles.enabled = getCheckBoxState (artworkAngleCheckBox);
+                                artworkAngle.text = artworkAngleSource;
+                                dh.artworkAngle = Number(artworkAngle.text);
+                            };
+                        
+                            var punchNumAngleSource = (oh != undefined) ? oh.punchNumAngle:getXMPproperty ("http://my.prepressSchema.namespace/", "punchNumAngle", 0);
+                            var punchNumPrintXmp = (getXMPproperty ("http://my.prepressSchema.namespace/", "punchNumPrint", "False") == "True") ? true:false;
+                            var punchNumPrintSource = (oh != undefined) ? oh.punchNumVisible:punchNumPrintXmp;
+                            if (punchNumAngle.text != punchNumAngleSource && punchNumPrintSource) {
+                                punchNumCheckBox.value = true;
+                                punchNumStatictext.enabled = getCheckBoxState (punchNumCheckBox);
+                                punchNumAngle.enabled = getCheckBoxState (punchNumCheckBox);
+                                punchNumAngles.enabled = getCheckBoxState (punchNumCheckBox);
+                                punchNumAngle.text = punchNumAngleSource;
+                                dh.punchNumAngle = Number(punchNumAngle.text);
+                            };
+                            if (punchNumPrintCheckBox.value != punchNumPrintSource) {
+                                punchNumPrintCheckBox.value = punchNumPrintSource;
+                            };
+                            
+                            var logoAngleXMP = getXMPproperty ("http://my.wbcSchema.namespace/", "logo", 0);
+                            var logoAngleSource = (oh != undefined) ? oh.logoAngle:logoAngleXMP;
+                            var logosPrintXMP = (logoAngleXMP == "-0" || logoAngleXMP == "0" || logoAngleXMP == "+0") ? false:true;
+                            var logosPrintSource = (oh != undefined) ? oh.logoVisible:logosPrintXMP;
+                            if (logoAngle.text != logoAngleSource && logosPrintSource) {
+                                logoAngleCheckBox.value = true;
+                                logoAngleStatictext.enabled = getCheckBoxState (logoAngleCheckBox);
+                                logoAngle.enabled = getCheckBoxState (logoAngleCheckBox);
+                                logoAngles.enabled = getCheckBoxState (logoAngleCheckBox);
+                                logoNoteStatictext.enabled = getCheckBoxState (logoAngleCheckBox);
+                                logoAngle.text = logoAngleSource;
+                                dh.logoAngle = Number(logoAngle.text);
+                            };
+                            if (logosPrintCheckBox.value != logosPrintSource) {
+                                logosPrintCheckBox.value = logosPrintSource;
+                            };
+                        };
+                    };
+            p4.g2 = p4.add("group");
+                var artworkAngleCheckBox = p4.g2.add("checkbox");
+                    artworkAngleCheckBox.value = (oh != undefined && oh.artworkAngle != dh.artworkAngle) ? true:false;
+                    artworkAngleCheckBox.onClick = function () {
+                        artworkAngleStatictext.enabled = getCheckBoxState (artworkAngleCheckBox);
+                        artworkAngle.enabled = getCheckBoxState (artworkAngleCheckBox);
+                        artworkAngles.enabled = getCheckBoxState (artworkAngleCheckBox);
+                    };
+                var artworkAngleStatictext = p4.g2.add('statictext {text: "Artwork angle [°]: ", justify: "left"}');
+                    artworkAngleStatictext.enabled = getCheckBoxState (artworkAngleCheckBox);
+                p4.g2.g0 = p4.g2.add("group {alignChildren: 'left', orientation: 'stack'}");
+                var artworkAngle = p4.g2.g0.add("edittext", [0, 0, 72, 20]);
+                    artworkAngle.text = dh.artworkAngle;
+                    artworkAngle.enabled = getCheckBoxState (artworkAngleCheckBox);
+                    artworkAngle.onChange = function () {
+                        dh.artworkAngle = Number(artworkAngle.text);
+                    };
+                    artworkAngle.onChanging = function () {
+                        var valid = /^[\d.-]+$/.test (artworkAngle.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                var artworkAngles = p4.g2.g0.add("dropdownlist", [0, 0, 90, 20], ["0", "45", "90", "135", "180", "-45", "-90"]);
+                    artworkAngles.minimumSize.width = 70;
+                    artworkAngles.enabled = getCheckBoxState (artworkAngleCheckBox);
+                    artworkAngles.onChange = function () {
+                        artworkAngle.text = artworkAngles.selection.text;
+                        dh.artworkAngle = Number(artworkAngle.text);
+                        artworkAngle.active = true;
+                    };
+            p4.add("panel"); // separator
+            p4.g3 = p4.add("group");
+                var cropMarksLengthStatictext = p4.g3.add('statictext {text: "Crop Marks length [mm]: ", justify: "left"}');
+                    cropMarksLengthStatictext.enabled = false;
+                var cropMarkLength = p4.g3.add('edittext {characters: 4, justify: "center"}');
+                    cropMarkLength.text = dh.cropMarkLength;
+                    cropMarkLength.onChange = function () {
+                        dh.cropMarkLength = Number(cropMarkLength.text);
+                    };
+                    cropMarkLength.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (cropMarkLength.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                    cropMarkLength.enabled = false;
+                var cropMarksThicknessStatictext = p4.g3.add('statictext {text: "thickness [pt]: "}');
+                    cropMarksThicknessStatictext.enabled = false;
+                var cropMarkThickness = p4.g3.add('edittext {characters: 4, justify: "center"}');
+                    cropMarkThickness.text = dh.cropMarkThickness;
+                    cropMarkThickness.onChange = function () {
+                        dh.cropMarkThickness = Number(cropMarkThickness.text);
+                    };
+                    cropMarkThickness.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (cropMarkThickness.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                    cropMarkThickness.enabled = false;
+            p4.add("panel"); // separator
+            p4.g4 = p4.add("group");
+                var punchNumCheckBox = p4.g4.add("checkbox");
+                    punchNumCheckBox.value = (oh != undefined && oh.punchNumAngle != dh.punchNumAngle) ? true:false;
+                    punchNumCheckBox.onClick = function () {
+                        punchNumStatictext.enabled = getCheckBoxState (punchNumCheckBox);
+                        punchNumAngle.enabled = getCheckBoxState (punchNumCheckBox);
+                        punchNumAngles.enabled = getCheckBoxState (punchNumCheckBox);
+                    };
+                var punchNumStatictext = p4.g4.add('statictext {text: "Punch Number angle  [°]: ", justify: "left"}');
+                    punchNumStatictext.enabled = getCheckBoxState (punchNumCheckBox);
+                p4.g4.g0 = p4.g4.add("group {alignChildren: 'left', orientation: 'stack'}");
+                var punchNumAngle = p4.g4.g0.add("edittext", [0, 0, 72, 20]);
+                    punchNumAngle.text = dh.punchNumAngle;
+                    punchNumAngle.enabled = getCheckBoxState (punchNumCheckBox);
+                    punchNumAngle.onChange = function () {
+                        dh.punchNumAngle = Number(punchNumAngle.text);
+                    };
+                    punchNumAngle.onChanging = function () {
+                        var valid = /^[\d.-]+$/.test (punchNumAngle.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                var punchNumAngles = p4.g4.g0.add("dropdownlist", [0, 0, 90, 20], ["0", "45", "90", "135", "180", "-45", "-90"]);
+                    punchNumAngles.minimumSize.width = 70;
+                    punchNumAngles.enabled = getCheckBoxState (punchNumCheckBox);
+                    punchNumAngles.onChange = function () {
+                        punchNumAngle.text = punchNumAngles.selection.text;
+                        dh.punchNumAngle = Number(punchNumAngle.text);
+                        punchNumAngle.active = true;
+                    };
+                var punchNumPrintStatictext = p4.g4.add('statictext {text: "Print Punch Numbers: ", justify: "right", characters: 18}');
+                    punchNumPrintStatictext.enabled = false;   
+                var punchNumPrintCheckBox = p4.g4.add("checkbox");
+                    punchNumPrintCheckBox.enabled = true;
+                    punchNumPrintCheckBox.value = (oh != undefined) ? oh.punchNumVisible:myDocument.layers.itemByName("PunchNumbers").printable;
+            p4.g5 = p4.add("group");
+                var punchNumSizeStatictext = p4.g5.add('statictext {text: "Punch Number size [pt]: ", justify: "left"}');
+                    punchNumSizeStatictext.enabled = false;
+                var punchNumSize = p4.g5.add('edittext {characters: 4, justify: "center"}');
+                    punchNumSize.text = dh.punchNumSize;
+                    punchNumSize.onChange = function () {
+                        dh.punchNumSize = Number(punchNumSize.text);
+                    };
+                    punchNumSize.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (punchNumSize.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                    punchNumSize.enabled = false;
+                var punchNumOffsetStatictext = p4.g5.add('statictext {text: "offset [pt]:"}');
+                    punchNumOffsetStatictext.enabled = false;
+                var punchNumOffset = p4.g5.add('edittext {characters: 4, justify: "center"}');
+                    punchNumOffset.text = dh.punchNumOffset;
+                    punchNumOffset.onChange = function () {
+                        dh.punchNumOffset = Number(punchNumOffset.text);
+                    };
+                    punchNumOffset.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (punchNumOffset.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                    punchNumOffset.enabled = false;
+            p4.add("panel"); // separator
+            p4.g6 = p4.add("group");
+                var logoStatictext = p4.g6.add('statictext {text: "Logo: ", justify: "left"}');
+                    logoStatictext.enabled = false;
+                var logosDropList = p4.g6.add("dropdownlist", undefined, getLibraryList ());
+                    logosDropList.minimumSize.width = 70;
+                    logosDropList.selection = getLibraryIndex (dh.logoName);
+                    logosDropList.onChange = function () {
+                        dh.logoName = logosDropList.selection.text;
+                    };
+                    logosDropList.enabled = false;
+                var libraryStatictext = p4.g6.add('statictext {text: "(library item)", justify: "left"}');
+                    libraryStatictext.enabled = false;
+                var logosPrintStatictext = p4.g6.add('statictext {text: "Print Logos: ", justify: "right", characters: 20}');
+                    logosPrintStatictext.enabled = false;   
+                var logosPrintCheckBox = p4.g6.add("checkbox");
+                    logosPrintCheckBox.enabled = true;
+                    logosPrintCheckBox.value = (oh != undefined) ? oh.logoVisible:myDocument.layers.itemByName("Logos").printable;
+            p4.g7 = p4.add("group");
+                var logoAngleCheckBox = p4.g7.add("checkbox");
+                    logoAngleCheckBox.value = (oh != undefined && oh.logoAngle != dh.logoAngle) ? true:false;
+                    logoAngleCheckBox.onClick = function () {
+                        logoAngleStatictext.enabled = getCheckBoxState (logoAngleCheckBox);
+                        logoAngle.enabled = getCheckBoxState (logoAngleCheckBox);
+                        logoAngles.enabled = getCheckBoxState (logoAngleCheckBox);
+                        logoNoteStatictext.enabled = getCheckBoxState (logoAngleCheckBox);
+                    };
+                var logoAngleStatictext = p4.g7.add('statictext {text: "Logo angle [°]: ", justify: "left"}');
+                    logoAngleStatictext.enabled = getCheckBoxState (logoAngleCheckBox);
+                p4.g7.g0 = p4.g7.add("group {alignChildren: 'left', orientation: 'stack'}");
+                var logoAngle = p4.g7.g0.add("edittext", [0, 0, 72, 20]);
+                    logoAngle.text = dh.logoAngle;
+                    logoAngle.enabled = getCheckBoxState (logoAngleCheckBox);
+                    logoAngle.onChange = function () {
+                        dh.logoAngle = Number(logoAngle.text);
+                    };
+                    logoAngle.onChanging = function () {
+                        var valid = /^[\d.-]+$/.test (logoAngle.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                var logoAngles = p4.g7.g0.add("dropdownlist", [0, 0, 90, 20], ["TSP", "CPY", "CPB", "TIK", "KMK", "TFR"]);
+                    logoAngles.minimumSize.width = 70;
+                    logoAngles.enabled = getCheckBoxState (logoAngleCheckBox);
+                    logoAngles.onChange = function () {
+                        switch(logoAngles.selection.text) {
+                            case "TSP":
+                                logoAngle.text = "20";
+                                break;
+                            case "CPY":
+                                logoAngle.text = "75";
+                                break;
+                            case "CPB":
+                                logoAngle.text = "135";
+                                break;
+                            case "TIK":
+                                logoAngle.text = "-56.5";
+                                break;
+                            case "KMK":
+                                logoAngle.text = "-105";
+                                break;
+                            case "TFR":
+                                logoAngle.text = "-165";
+                                break;
+                            };
+                        dh.logoAngle = Number(logoAngle.text);
+                        logoAngle.active = true;
+                    };   
+                var logoNoteStatictext = p4.g7.add('statictext {text: "(from punch number)", justify: "left"}');
+                    logoNoteStatictext.enabled = getCheckBoxState (logoAngleCheckBox);
+            p4.g8 = p4.add("group");
+                var logoOffsetStatictext = p4.g8.add('statictext {text: "Logo offset [mm]:"}');
+                    logoOffsetStatictext.enabled = false;
+                var logoOffset = p4.g8.add('edittext {characters: 4, justify: "center"}');
+                    logoOffset.text = dh.logoOffset;
+                    logoOffset.onChange = function () {
+                        dh.logoOffset = Number(logoOffset.text);
+                    };
+                    logoOffset.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (logoOffset.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1] : [1, 0.5, 0.5, 1]);
+                    };
+                    logoOffset.enabled = false;
+        artworkTab.add("image", undefined, File (imagesFolder + "grafika.png"));
+        
+        dh = eval(myDocument.extractLabel("dh")); // precita a vytvori premennu z dokumentu
+            dh.artworkFile = (oh != undefined) ? oh.artworkFile:File(myDocument.links[0].filePath);
+            artworkName.text = dh.artworkFile.displayName;
+            artworkAngle.text = (oh != undefined) ? oh.artworkAngle:dh.artworkAngle;
+            punchNumAngle.text = (oh != undefined) ? oh.punchNumAngle:dh.punchNumAngle;
+            punchNumSize.text = dh.punchNumSize;
+            punchNumOffset.text = dh.punchNumOffset;
+            logosDropList.selection = getLibraryIndex (dh.logoName);
+            logoAngle.text = (oh != undefined) ? oh.logoAngle:dh.logoAngle;
+            logoOffset.text = dh.logoOffset;
+            cropMarkLength.text = dh.cropMarkLength;
+            cropMarkThickness.text = dh.cropMarkThickness;
+
+        var buttonGroup = w.add ('group {alignment: "right"}');
+            buttonGroup.add ("button", undefined, "OK");
+            buttonGroup.add ("button", undefined, "Cancel");
+    
+    if (w.show () == 1) {
+         progWin.text = "One-Up editting...";
+         progWin.show();
+        dieSet = new DieSet();
+        dieSet.masterOneUp.cutDiameter = dh.cutDiameter;
+        dieSet.masterOneUp.bleedDiameter = dh.bleedDiameter;
+        dieSet.punchDieCount = dh.punchDieCount;
+        dieSet.punchHorizontalOffset = dh.dieHorizontalOffset;
+        dieSet.punchVerticalOffset = dh.dieVerticalOffset;
+        dieSet.topPunchNumber = dh.topDieNumber;
+        dieSet.punchStepCount = dh.punchStepCount;
+        dieSet.punchStepWidth = dh.punchStepWidth;
+        artworkFile = dh.artworkFile;
+        artworkRotationAngle = dh.artworkAngle;
+        dieSet.fillDieSet();
+        if (artworkNameCheckBox.value == true) {
+            //myDocument.links.everyItem().relink(dh.artworkFile);
+            relinkArtwork (dh.artworkFile);
+        };
+        if (artworkAngleCheckBox.value == true) {
+            rotateArtwork(dh.artworkAngle);
+        };
+        if (punchNumCheckBox.value == true) {
+            rotatePunchNumbers(dh.punchNumAngle);
+            if (logoAngleCheckBox.value == false) {
+                rotateLogos(dh.logoAngle + dh.punchNumAngle);
+            };
+        };
+        if (logoAngleCheckBox.value == true) {
+            rotateLogos(dh.logoAngle + dh.punchNumAngle);
+        };
+        app.activeDocument.layers.itemByName("PunchNumbers").printable = getCheckBoxState (punchNumPrintCheckBox);
+        app.activeDocument.layers.itemByName("PunchNumbers").visible = getCheckBoxState (punchNumPrintCheckBox);
+        app.activeDocument.layers.itemByName("Logos").printable = getCheckBoxState (logosPrintCheckBox);
+        app.activeDocument.layers.itemByName("Logos").visible = getCheckBoxState (logosPrintCheckBox);
+        // logo z kniznice
+        myDocument.insertLabel("dieSet", dieSet.toSource()); // vlozi objekt vysek do dokumentu        
+        myDocument.insertLabel("dh", dh.toSource()); // vlozi objekt data z dialogu do dokumentu
+        progWin.hide();
+        if (doneAlert) {
+            alert("One-Up editing was successfully...");
+        };
+        return dh.artworkFile;
+    };
+};
 //
 // TESTING
-//jobWorkflow ();
+//loadOrEditOneUp (true);
