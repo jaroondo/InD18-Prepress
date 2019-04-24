@@ -2757,9 +2757,9 @@ function prepressSetup (doneAlert) { // nastavenie celeho pre-pressu
     };
 };
 function jobWorkflow () {
-    var awFile = selectArtwork ();
-    if (awFile == undefined) { return };
-    var oh = getOneupData (awFile);
+//~     var awFile = selectArtwork ();
+//~     if (awFile == undefined) { return };
+//~     var oh = getOneupData (awFile);
     var w = new Window ("dialog", "Job Workflow...");
         w.alignChildren = "left";
         var p1 = w.add ('panel {text: "", borderstyle: "gray", alignChildren: "fill", alignment: "fill"}');
@@ -2768,20 +2768,19 @@ function jobWorkflow () {
                 p1.g1.alignChildren = "left";
                 
                 var editCheckBox = p1.g1.add("checkbox");
-                    editCheckBox.text = (oh == undefined) ? "Edit One-Up":"Load One-Up";
+                    editCheckBox.text = "Load and Edit One-Up";
                     editCheckBox.value = true;
                     editCheckBox.enabled = false;
                 var prepressCheckBox = p1.g1.add("checkbox", undefined, "Prepress Set-Up");
                     prepressCheckBox.value = true;
-                    prepressCheckBox.enabled = true;
                 var saveJobCheckBox = p1.g1.add("checkbox", undefined, "Save Job As");
-                    saveJobCheckBox.value = (changeFileExtension (awFile, ".indd").exists) ? false:true;
+                    saveJobCheckBox.value = true;
                 var pdfExpCheckBox = p1.g1.add("checkbox", undefined, "Export to PDF");
-                    pdfExpCheckBox.value = (changeFileExtension (awFile, ".indd.pdf").exists) ? false:true;
+                    pdfExpCheckBox.value = true;
                 var closeCheckBox = p1.g1.add("checkbox", undefined, "Close document");
                     closeCheckBox.value = true;
                 var thumbnailCheckBox = p1.g1.add("checkbox", undefined, "Artwork JPG thumbnail");
-                    thumbnailCheckBox.value = (changeFileExtension (awFile, ".jpg").exists) ? false:true;
+                    thumbnailCheckBox.value = true;
                 
         var buttonGroup = w.add ('group {alignment: "right"}');
             buttonGroup.add ("button", undefined, "OK");
@@ -2789,13 +2788,8 @@ function jobWorkflow () {
     
     if (w.show () == 1) {
         if (editCheckBox.value == true) {
-            if (oh != undefined) {
-                loadOneup (oh);
-            } else {
-                awFile = editOneUp (false);
-                artworkFile = awFile; // globalna premenna
-                if (awFile == undefined) { return };
-            };
+            var awFile = loadOrEditOneUp (false);
+            if (awFile == undefined) {return};
         };
         if (prepressCheckBox.value == true) {
             prepressSetup (false);
@@ -3003,13 +2997,19 @@ function selectArtwork () {
 function loadOrEditOneUp (doneAlert) {
     loadJobPrefs ();
 
-    var docToOpen = jobPrefs.jobsRootFolder.openDlg ("Select Artwork File");
-    if (docToOpen != null) {
-        var oh = getOneupData (docToOpen);
-        app.open(jobPrefs.defaultTopTemplateFile);
+    var awFile = jobPrefs.jobsRootFolder.openDlg ("Select Artwork File");
+    if (awFile != null) {
+        var oh = getOneupData (awFile);
     } else {
         alert("You have not choosen any artwork...");
         return;
+    };
+    var awRelink = false;
+    if (changeFileExtension (awFile, ".indd").exists) {
+        app.open(changeFileExtension (awFile, ".indd"));
+    } else {
+        app.open(jobPrefs.defaultTopTemplateFile);
+        awRelink = true;
     };
 
     myDocument = app.activeDocument;
@@ -3026,7 +3026,8 @@ function loadOrEditOneUp (doneAlert) {
         var p4 = artworkTab.add('panel {text: "", borderstyle: "gray", alignChildren: "fill", alignment: "fill"}');
             p4.g1 = p4.add("group");
                 var artworkNameCheckBox = p4.g1.add("checkbox");
-                    artworkNameCheckBox.value = (oh != undefined) ? true:false;
+                    artworkNameCheckBox.value = awRelink;
+                    artworkNameCheckBox.enabled = false;
                     artworkNameCheckBox.onClick = function () {
                         artworkNameStatictext.enabled = getCheckBoxState (artworkNameCheckBox);
                         artworkName.enabled = getCheckBoxState (artworkNameCheckBox);
@@ -3038,11 +3039,13 @@ function loadOrEditOneUp (doneAlert) {
                     artworkName.characters = 35;
                     artworkName.enabled = getCheckBoxState (artworkNameCheckBox);
                 var loadArtworkBtn = p4.g1.add ("button", undefined, "Select");
-                    loadArtworkBtn.enabled = (oh != undefined) ? false:getCheckBoxState (artworkNameCheckBox);
-                    loadArtworkBtn.onClick = function () {
-                        var loadFile =  jobPrefs.jobsRootFolder.openDlg ("Load artwork file", "PDF: *.pdf, All files: *.*");
+                    //loadArtworkBtn.enabled = (oh != undefined) ? false:getCheckBoxState (artworkNameCheckBox);
+                    loadArtworkBtn.visible = false;
+                    var loadArtwork = function () { //loadArtworkBtn.onClick = function () {
+                        //var loadFile = jobPrefs.jobsRootFolder.openDlg ("Load artwork file", "PDF: *.pdf, All files: *.*");
+                        var loadFile = awFile;
                         if (loadFile != null) {
-                            oh = getOneupData (loadFile); //nevie otvorit pokial je aktivny dialog
+                            //oh = getOneupData (loadFile); //nevie otvorit pokial je aktivny dialog
                             dh.artworkFile = loadFile;
                             artworkName.text = dh.artworkFile.displayName;
                             
@@ -3307,6 +3310,10 @@ function loadOrEditOneUp (doneAlert) {
             buttonGroup.add ("button", undefined, "OK");
             buttonGroup.add ("button", undefined, "Cancel");
     
+    if (awRelink) {
+        loadArtwork ();
+    };
+        
     if (w.show () == 1) {
          progWin.text = "One-Up editting...";
          progWin.show();
@@ -3354,4 +3361,4 @@ function loadOrEditOneUp (doneAlert) {
 };
 //
 // TESTING
-//loadOrEditOneUp (true);
+//jobWorkflow ();
