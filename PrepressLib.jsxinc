@@ -3008,7 +3008,11 @@ function loadOrEditOneUp (doneAlert) {
     if (changeFileExtension (awFile, ".indd").exists) {
         app.open(changeFileExtension (awFile, ".indd"));
     } else {
-        app.open(jobPrefs.defaultTopTemplateFile);
+        if (awFile.displayName.search("-sp") > -1) {
+            app.open(jobPrefs.defaultBottomTemplateFile);
+        } else {
+            app.open(jobPrefs.defaultTopTemplateFile);
+        };
         awRelink = true;
     };
 
@@ -3361,4 +3365,4 @@ function loadOrEditOneUp (doneAlert) {
 };
 //
 // TESTING
-prepressSetup (true);
+//jobWorkflow ();
