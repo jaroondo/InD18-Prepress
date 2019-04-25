@@ -1199,18 +1199,18 @@ function setArtworkVariables () { // priradí "artwork" data do textových preme
 function setWbcVariables () { // priradí data z WebCentra do textových premenných a nastavý znakové styly
     if (myLinkXmp.getProperty("http://my.wbcSchema.namespace/", "customerID").toString() != "") {
         var artworkID = myLinkXmp.getProperty("http://my.wbcSchema.namespace/", "internalPlantCode").toString().substr(0, 17);
-        var oldFirstLetter = artworkID.charAt (0);
-        var shortID = artworkID.slice (1);
-        var plateLetter = oldFirstLetter;
-        if (dh.plateWidth == 1160.00) { 
-            plateLetter = "I";
-        };
-        if (dh.plateWidth == 1220.00) {
-            plateLetter = "U";
-        };
-        if (oldFirstLetter != plateLetter) {
-            artworkID = plateLetter + shortID;
-        };
+//~         var oldFirstLetter = artworkID.charAt (0);
+//~         var shortID = artworkID.slice (1);
+//~         var plateLetter = oldFirstLetter;
+//~         if (dh.plateWidth == 1160.00) { 
+//~             plateLetter = "I";
+//~         };
+//~         if (dh.plateWidth == 1220.00) {
+//~             plateLetter = "U";
+//~         };
+//~         if (oldFirstLetter != plateLetter) {
+//~             artworkID = plateLetter + shortID;
+//~         };
         myTextVariable.itemByName("artworkID").variableOptions.contents = artworkID;
         myCharacterStyle.itemByName("artworkID").fillColor = mySwatch.itemByName("Registration");
         
@@ -2729,7 +2729,7 @@ function prepressSetup (doneAlert) { // nastavenie celeho pre-pressu
     setProgWinContent ("Used Inks", 0, 2); pbar.value = 1; progWin.update();
         clearCxVariables (); pbar.value = 2; progWin.update();
         usedInksList ();
-    if (changeFileExtension (artworkFile, "-oneup.indd").exists) {
+    if (artworkFile != undefined && changeFileExtension (artworkFile, "-oneup.indd").exists) {  
         setProgWinContent ("Load One-Up Styles", 0, 1); pbar.value = 1; progWin.update();
             loadOneupStyles();
     } else {
@@ -3361,4 +3361,4 @@ function loadOrEditOneUp (doneAlert) {
 };
 //
 // TESTING
-//jobWorkflow ();
+prepressSetup (true);
