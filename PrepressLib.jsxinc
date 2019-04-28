@@ -2912,7 +2912,7 @@ function makePreview () {
                     artworkEdittext.characters = 50;
                 var artworkBtn = p1.g1.add ("button", undefined, "Select");
                 artworkBtn.onClick = function () {
-                    artworkSelected = jobPrefs.jobsRootFolder.openDlg ("Select Artwork File", "All files: *.*, Normalized PDF: *.pdf, Adobe Illustrator: *.ai");
+                    artworkSelected = jobPrefs.jobsRootFolder.openDlg ("Select Artwork File", "Normalized PDF: *.pdf, All files: *.*");
                     if (artworkSelected != null) {
                         okBtn.enabled = true;
                         artworkFile = artworkSelected; // globalna premenna = lokalna
@@ -2997,7 +2997,7 @@ function selectArtwork () {
 function loadOrEditOneUp (doneAlert) {
     loadJobPrefs ();
 
-    var awFile = jobPrefs.jobsRootFolder.openDlg ("Select Artwork File");
+    var awFile = jobPrefs.jobsRootFolder.openDlg ("Select Artwork File", "Normalized PDF: *.pdf, All files: *.*");
     if (awFile != null) {
         var oh = getOneupData (awFile);
     } else {
@@ -3007,6 +3007,7 @@ function loadOrEditOneUp (doneAlert) {
     var awRelink = false;
     if (changeFileExtension (awFile, ".indd").exists) {
         app.open(changeFileExtension (awFile, ".indd"));
+        return;
     } else {
         if (awFile.displayName.search("-sp") > -1) {
             app.open(jobPrefs.defaultBottomTemplateFile);
@@ -3038,9 +3039,10 @@ function loadOrEditOneUp (doneAlert) {
                         loadArtworkBtn.enabled = getCheckBoxState (artworkNameCheckBox);
                     };
                 var artworkNameStatictext = p4.g1.add('statictext {text: "Artwork: ", justify: "left"}');
+                    artworkNameStatictext.text = (oh != undefined) ? "One-Up: ":"Artwork: "
                     artworkNameStatictext.enabled = getCheckBoxState (artworkNameCheckBox);
                 var artworkName = p4.g1.add("edittext", undefined,  dh.artworkFile.displayName, {readonly: true, justify: "left"});
-                    artworkName.characters = 35;
+                    artworkName.characters = 40;
                     artworkName.enabled = getCheckBoxState (artworkNameCheckBox);
                 var loadArtworkBtn = p4.g1.add ("button", undefined, "Select");
                     //loadArtworkBtn.enabled = (oh != undefined) ? false:getCheckBoxState (artworkNameCheckBox);
@@ -3298,14 +3300,17 @@ function loadOrEditOneUp (doneAlert) {
         artworkTab.add("image", undefined, File (imagesFolder + "grafika.png"));
         
         dh = eval(myDocument.extractLabel("dh")); // precita a vytvori premennu z dokumentu
-            dh.artworkFile = (oh != undefined) ? oh.artworkFile:File(myDocument.links[0].filePath);
+        if (awRelink) {
+            loadArtwork ();
+        };
+            dh.artworkFile = awFile;
             artworkName.text = dh.artworkFile.displayName;
-            artworkAngle.text = (oh != undefined) ? oh.artworkAngle:dh.artworkAngle;
-            punchNumAngle.text = (oh != undefined) ? oh.punchNumAngle:dh.punchNumAngle;
+            artworkAngle.text = dh.artworkAngle;
+            punchNumAngle.text = dh.punchNumAngle;
             punchNumSize.text = dh.punchNumSize;
             punchNumOffset.text = dh.punchNumOffset;
             logosDropList.selection = getLibraryIndex (dh.logoName);
-            logoAngle.text = (oh != undefined) ? oh.logoAngle:dh.logoAngle;
+            logoAngle.text = dh.logoAngle;
             logoOffset.text = dh.logoOffset;
             cropMarkLength.text = dh.cropMarkLength;
             cropMarkThickness.text = dh.cropMarkThickness;
@@ -3313,14 +3318,10 @@ function loadOrEditOneUp (doneAlert) {
         var buttonGroup = w.add ('group {alignment: "right"}');
             buttonGroup.add ("button", undefined, "OK");
             buttonGroup.add ("button", undefined, "Cancel");
-    
-    if (awRelink) {
-        loadArtwork ();
-    };
         
     if (w.show () == 1) {
-         progWin.text = "One-Up editting...";
-         progWin.show();
+        progWin.text = "One-Up editting...";
+        progWin.show();
         dieSet = new DieSet();
         dieSet.masterOneUp.cutDiameter = dh.cutDiameter;
         dieSet.masterOneUp.bleedDiameter = dh.bleedDiameter;
@@ -3334,25 +3335,30 @@ function loadOrEditOneUp (doneAlert) {
         artworkRotationAngle = dh.artworkAngle;
         dieSet.fillDieSet();
         if (artworkNameCheckBox.value == true) {
-            //myDocument.links.everyItem().relink(dh.artworkFile);
             relinkArtwork (dh.artworkFile);
+//~             $.writeln("artworkFile: " + dh.artworkFile);
         };
         if (artworkAngleCheckBox.value == true) {
             rotateArtwork(dh.artworkAngle);
+//~             $.writeln("artworkAngle: " + dh.artworkAngle);
         };
         if (punchNumCheckBox.value == true) {
             rotatePunchNumbers(dh.punchNumAngle);
             if (logoAngleCheckBox.value == false) {
                 rotateLogos(dh.logoAngle + dh.punchNumAngle);
             };
+//~             $.writeln("punchNumAngle: " + dh.punchNumAngle);
         };
         if (logoAngleCheckBox.value == true) {
             rotateLogos(dh.logoAngle + dh.punchNumAngle);
+//~             $.writeln("logoAngle: " + dh.logoAngle);
         };
         app.activeDocument.layers.itemByName("PunchNumbers").printable = getCheckBoxState (punchNumPrintCheckBox);
         app.activeDocument.layers.itemByName("PunchNumbers").visible = getCheckBoxState (punchNumPrintCheckBox);
         app.activeDocument.layers.itemByName("Logos").printable = getCheckBoxState (logosPrintCheckBox);
         app.activeDocument.layers.itemByName("Logos").visible = getCheckBoxState (logosPrintCheckBox);
+//~         $.writeln("punchNumPrint: " + getCheckBoxState (punchNumPrintCheckBox));
+//~         $.writeln("logoPrint: " + getCheckBoxState (logosPrintCheckBox));
         // logo z kniznice
         myDocument.insertLabel("dieSet", dieSet.toSource()); // vlozi objekt vysek do dokumentu        
         myDocument.insertLabel("dh", dh.toSource()); // vlozi objekt data z dialogu do dokumentu
@@ -3365,4 +3371,5 @@ function loadOrEditOneUp (doneAlert) {
 };
 //
 // TESTING
+//loadOrEditOneUp (true);
 //jobWorkflow ();
