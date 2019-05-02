@@ -504,6 +504,8 @@ function JobPreferencies() {
     this.defaultBottomTemplateFile = new File();
     this.defaultPreviewTemplateFile = new File();
     this.jobsRootFolder = new Folder();
+    this.topExportFolder = new Folder();
+    this.bottomExportFolder = new Folder();
 };
 //
 // METODY
@@ -2887,6 +2889,38 @@ function jobPreferencies () {
                         jobsFolderEdittext.text = jobPrefs.jobsRootFolder.fsName;
                     };
                 };
+            p2.g2 = p2.add("group");
+                if (jobPrefs.topExportFolder == undefined) {
+                    jobPrefs.topExportFolder = new Folder();
+                };
+                var topExportFolderStatictext = p2.g2.add('statictext {text: "Top Export Folder: ", justify: "left"}');
+                    topExportFolderStatictext.characters = 11;
+                var topExportFolderEdittext = p2.g2.add("edittext", undefined,  jobPrefs.topExportFolder.fsName, {readonly: true, justify: "left"});
+                    topExportFolderEdittext.characters = 35;
+                var topExportFolderBtn = p2.g2.add ("button", undefined, "Select");
+                topExportFolderBtn.onClick = function () {
+                    var topExportFolderSelected = jobPrefs.topExportFolder.selectDlg ("Select Top Export Folder");
+                    if (topExportFolderSelected != null) {
+                        jobPrefs.topExportFolder = topExportFolderSelected;
+                        topExportFolderEdittext.text = jobPrefs.topExportFolder.fsName;
+                    };
+                };
+            p2.g3 = p2.add("group");
+                if (jobPrefs.bottomExportFolder == undefined) {
+                    jobPrefs.bottomExportFolder = new Folder();
+                };
+                var bottomExportFolderStatictext = p2.g3.add('statictext {text: "Bottom Export Folder: ", justify: "left"}');
+                    bottomExportFolderStatictext.characters = 11;
+                var bottomExportFolderEdittext = p2.g3.add("edittext", undefined,  jobPrefs.bottomExportFolder.fsName, {readonly: true, justify: "left"});
+                    bottomExportFolderEdittext.characters = 35;
+                var bottomExportFolderBtn = p2.g3.add ("button", undefined, "Select");
+                bottomExportFolderBtn.onClick = function () {
+                    var bottomExportFolderSelected = jobPrefs.bottomExportFolder.selectDlg ("Select Bottom Export Folder");
+                    if (bottomExportFolderSelected != null) {
+                        jobPrefs.bottomExportFolder = bottomExportFolderSelected;
+                        bottomExportFolderEdittext.text = jobPrefs.bottomExportFolder.fsName;
+                    };
+                };
         
         var buttonGroup = w.add ('group {alignment: "right"}');
             buttonGroup.add ("button", undefined, "OK");
@@ -3371,5 +3405,4 @@ function loadOrEditOneUp (doneAlert) {
 };
 //
 // TESTING
-//loadOrEditOneUp (true);
-//jobWorkflow ();
+//jobPreferencies ();
