@@ -1613,21 +1613,34 @@ function saveJobAs (doneAlert) {
         };
     };
 };
-function pdfExport () {
+function pdfExport(viewPDF) {
     try {
         myDocument = app.activeDocument;
     } catch (myError) {
         alert("You have not opened any document...");
         return;
     };
+    loadJobPrefs ();
+    var exportFolder = (myDocument.name.search("-sp") == -1) ? jobPrefs.topExportFolder:jobPrefs.bottomExportFolder
+    if (!exportFolder.exists || exportFolder.error != "") {
+        alert("Export folder will be changed to Artwork folder due to error: " + exportFolder.error);
+        exportFolder = myDocument.filePath;
+    };
+    exportFolder += "/";
+    var exportedFile = File(exportFolder + myDocument.name + ".pdf");
     var myPDFExportPreset = app.pdfExportPresets.item("CTP");
-    app.pdfExportPreferences.viewPDF = true;
+    app.pdfExportPreferences.viewPDF = viewPDF;
     myDocument.exportFile(
         ExportFormat.pdfType,
-        File(myDocument.fullName + ".pdf"),
+        exportedFile,
         false, 
         myPDFExportPreset
     );
+    var linkFile = File(myDocument.fullName + "-lnk" + ".LNK");
+    if (linkFile.exists) {
+        linkFile.remove();
+    };
+    File(myDocument.fullName + "-lnk").createAlias(exportedFile.fsName);
     myDocument.save(File(myDocument.fullName));
 };
 function loadJobPrefs () {
@@ -1868,7 +1881,7 @@ function prePressMenu () { // Prepress Menu
         //tasksSubmenu.menuSeparators.add();
         var exportToPdfAction = app.scriptMenuActions.add("Export To PDF...");
             exportToPdfAction.eventListeners.add("onInvoke", function() { 
-               pdfExport ();
+               pdfExport(true);
             });
         var exportToPdfMenuItem = tasksSubmenu.menuItems.add(exportToPdfAction);
         // Make Preview SubMenuItem
@@ -2777,12 +2790,18 @@ function jobWorkflow () {
                     prepressCheckBox.value = true;
                 var saveJobCheckBox = p1.g1.add("checkbox", undefined, "Save Job As");
                     saveJobCheckBox.value = true;
-                var pdfExpCheckBox = p1.g1.add("checkbox", undefined, "Export to PDF");
-                    pdfExpCheckBox.value = true;
-                var closeCheckBox = p1.g1.add("checkbox", undefined, "Close document");
-                    closeCheckBox.value = true;
-                var thumbnailCheckBox = p1.g1.add("checkbox", undefined, "Artwork JPG thumbnail");
-                    thumbnailCheckBox.value = true;
+                p1.g2 = p1.add("group");
+                    var pdfExpCheckBox = p1.g2.add("checkbox", undefined, "Export to PDF");
+                        pdfExpCheckBox.value = true;
+                    var pdfViewCheckBox = p1.g2.add("checkbox", undefined, "View PDF");
+                        pdfViewCheckBox.value = false;
+                p1.g3 = p1.add("group", undefined);
+                    p1.g3.orientation = "column";
+                    p1.g3.alignChildren = "left";
+                    var closeCheckBox = p1.g3.add("checkbox", undefined, "Close document");
+                        closeCheckBox.value = true;
+                    var thumbnailCheckBox = p1.g3.add("checkbox", undefined, "Artwork JPG thumbnail");
+                        thumbnailCheckBox.value = false;
                 
         var buttonGroup = w.add ('group {alignment: "right"}');
             buttonGroup.add ("button", undefined, "OK");
@@ -2800,7 +2819,7 @@ function jobWorkflow () {
             saveJobAs (false);
         };
         if (pdfExpCheckBox.value == true) {
-            pdfExport ();
+            pdfExport(pdfViewCheckBox.value);
         };
         if (closeCheckBox.value == true) {
             myDocument.close();
@@ -2814,7 +2833,9 @@ function jobWorkflow () {
                 makePreview ();
             };
         };
-        //alert('Job worklow finished successfully...');
+        if (!pdfViewCheckBox.value) {
+            alert('Job worklow finished successfully...');
+        };
     };
 };
 function jobPreferencies () {
@@ -3041,7 +3062,7 @@ function loadOrEditOneUp (doneAlert) {
     var awRelink = false;
     if (changeFileExtension (awFile, ".indd").exists) {
         app.open(changeFileExtension (awFile, ".indd"));
-        return;
+        return awFile;
     } else {
         if (awFile.displayName.search("-sp") > -1) {
             app.open(jobPrefs.defaultBottomTemplateFile);
@@ -3405,4 +3426,4 @@ function loadOrEditOneUp (doneAlert) {
 };
 //
 // TESTING
-//jobPreferencies ();
+//jobWorkflow ();
