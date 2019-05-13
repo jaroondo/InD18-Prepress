@@ -2772,27 +2772,25 @@ function prepressSetup (doneAlert) { // nastavenie celeho pre-pressu
     };
 };
 function jobWorkflow () {
-//~     var awFile = selectArtwork ();
-//~     if (awFile == undefined) { return };
-//~     var oh = getOneupData (awFile);
+    var awFile = selectArtwork ();
+    if (awFile == null) { return };
+    
     var w = new Window ("dialog", "Job Workflow...");
         w.alignChildren = "left";
         var p1 = w.add ('panel {text: "", borderstyle: "gray", alignChildren: "fill", alignment: "fill"}');
             p1.g1 = p1.add("group", undefined);
                 p1.g1.orientation = "column";
                 p1.g1.alignChildren = "left";
-                
                 var editCheckBox = p1.g1.add("checkbox");
                     editCheckBox.text = "Load and Edit One-Up";
-                    editCheckBox.value = true;
-                    editCheckBox.enabled = false;
+                    editCheckBox.value = (!changeFileExtension (awFile, ".indd").exists) ? true:false;
                 var prepressCheckBox = p1.g1.add("checkbox", undefined, "Prepress Set-Up");
-                    prepressCheckBox.value = true;
+                    prepressCheckBox.value = (!changeFileExtension (awFile, ".indd").exists) ? true:false;
                 var saveJobCheckBox = p1.g1.add("checkbox", undefined, "Save Job As");
-                    saveJobCheckBox.value = true;
+                    saveJobCheckBox.value = (!changeFileExtension (awFile, ".indd").exists) ? true:false;
                 p1.g2 = p1.add("group");
                     var pdfExpCheckBox = p1.g2.add("checkbox", undefined, "Export to PDF");
-                        pdfExpCheckBox.value = true;
+                        pdfExpCheckBox.value = (!changeFileExtension (awFile, ".indd-lnk.LNK").exists) ? true:false;
                     var pdfViewCheckBox = p1.g2.add("checkbox", undefined, "View PDF");
                         pdfViewCheckBox.value = false;
                 p1.g3 = p1.add("group", undefined);
@@ -2800,17 +2798,19 @@ function jobWorkflow () {
                     p1.g3.alignChildren = "left";
                     var closeCheckBox = p1.g3.add("checkbox", undefined, "Close document");
                         closeCheckBox.value = true;
-                    var thumbnailCheckBox = p1.g3.add("checkbox", undefined, "Artwork JPG thumbnail");
-                        thumbnailCheckBox.value = false;
+                    var thumbnailCheckBox = p1.g3.add("checkbox", undefined, "Artwork preview");
+                        thumbnailCheckBox.value = (!changeFileExtension (awFile, ".jpg").exists) ? true:false;
                 
         var buttonGroup = w.add ('group {alignment: "right"}');
             buttonGroup.add ("button", undefined, "OK");
             buttonGroup.add ("button", undefined, "Cancel");
     
     if (w.show () == 1) {
+        if (changeFileExtension (awFile, ".indd").exists) {
+            app.open(changeFileExtension (awFile, ".indd"));
+        };
         if (editCheckBox.value == true) {
-            var awFile = loadOrEditOneUp (false);
-            if (awFile == undefined) {return};
+            loadOrEditOneUp (false);
         };
         if (prepressCheckBox.value == true) {
             prepressSetup (false);
@@ -2825,13 +2825,9 @@ function jobWorkflow () {
             myDocument.close();
         };
         if (thumbnailCheckBox.value == true) {
-            if (awFile != undefined) { // ak existuje urobit nahlad z oneup inak  ostava
-                artworkPreview (awFile);
-                jpgExport (changeFileExtension (awFile, ".jpg"));
-                app.activeDocument.close(SaveOptions.NO);
-            } else {
-                makePreview ();
-            };
+            artworkPreview (awFile);
+            jpgExport (changeFileExtension (awFile, ".jpg"));
+            app.activeDocument.close(SaveOptions.NO);
         };
         if (!pdfViewCheckBox.value) {
             alert('Job worklow finished successfully...');
@@ -3023,20 +3019,33 @@ function makePreview () {
 function selectArtwork () {
     loadJobPrefs ();
     var artworkSelected;
-    var w = new Window ("dialog", "Select Artwork...");
+    if (artworkFile == undefined) {
+        artworkFile = new File();    
+    };
+    var workingFolder = (artworkFile.exists) ? artworkFile.parent:jobPrefs.jobsRootFolder;
+    var w = new Window ("dialog", "Select artwork...");
         w.alignChildren = "left";
-        var p1 = w.add ('panel {text: "", borderstyle: "gray", alignChildren: "fill", alignment: "fill"}');
+        var p1 = w.add ('panel {text: "", borderstyle: "gray", alignChildren: "fill", alignment: "left"}');
+            p1.g0 = p1.add("group");
+                var workingFolderLabel = p1.g0.add('statictext {text: "Working Folder: ", justify: "left", characters: 60}');
+                    workingFolderLabel.text = "Working Folder: " + Folder.decode(workingFolder);
+                var folderBtn = p1.g0.add ("button", undefined, "Open");
+                    folderBtn.onClick = function () {
+                        workingFolder.execute();
+                    };
             p1.g1 = p1.add("group");
-                p1.g1.add('statictext {text: "Selected File: ", justify: "left", characters: 8}');
+                p1.g1.add('statictext {text: "Artwork File: ", justify: "left", characters: 8}');
                 var artworkEdittext = p1.g1.add("edittext", undefined,   "Please select artwork file...", {readonly: true, justify: "left"});
                     artworkEdittext.characters = 50;
                 var artworkBtn = p1.g1.add ("button", undefined, "Select");
                 artworkBtn.onClick = function () {
-                    artworkSelected = jobPrefs.jobsRootFolder.openDlg ("Select Artwork File", "All files: *.*, Normalized PDF: *.pdf, Adobe Illustrator: *.ai");
+                    artworkSelected = workingFolder.openDlg ("Select Artwork File", "Normalized PDF: *.pdf, Adobe Illustrator: *.ai, All files: *.*");
                     if (artworkSelected != null) {
                         okBtn.enabled = true;
                         artworkFile = artworkSelected; // globalna premenna = lokalna
-                        artworkEdittext.text = artworkSelected.displayName;
+                        artworkEdittext.text = artworkFile.displayName;
+                        workingFolder = artworkFile.parent;
+                        workingFolderLabel.text = "Working Folder: " + Folder.decode(workingFolder);
                     };
                 };
                 
@@ -3052,7 +3061,7 @@ function selectArtwork () {
 function loadOrEditOneUp (doneAlert) {
     loadJobPrefs ();
 
-    var awFile = jobPrefs.jobsRootFolder.openDlg ("Select Artwork File", "Normalized PDF: *.pdf, All files: *.*");
+    var awFile = (artworkFile == undefined) ? jobPrefs.jobsRootFolder.openDlg ("Select Artwork File", "Normalized PDF: *.pdf, All files: *.*"):artworkFile;
     if (awFile != null) {
         var oh = getOneupData (awFile);
     } else {
@@ -3061,8 +3070,9 @@ function loadOrEditOneUp (doneAlert) {
     };
     var awRelink = false;
     if (changeFileExtension (awFile, ".indd").exists) {
-        app.open(changeFileExtension (awFile, ".indd"));
-        return awFile;
+        var inddFile = changeFileExtension (awFile, ".indd");
+        app.open(inddFile);
+        return inddFile;
     } else {
         if (awFile.displayName.search("-sp") > -1) {
             app.open(jobPrefs.defaultBottomTemplateFile);
@@ -3427,3 +3437,4 @@ function loadOrEditOneUp (doneAlert) {
 //
 // TESTING
 //jobWorkflow ();
+//selectArtwork ();
