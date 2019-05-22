@@ -1604,9 +1604,7 @@ function saveJobAs (doneAlert) {
     var pathLength = dh.artworkFile.fullName.length
     if(myDocument.modified == true){
         myDocument.save(File(dh.artworkFile.fullName.substr(0, pathLength - 3) + "indd"));
-//~         if (doneAlert) {
-//~             alert('Document Saved As: ' + myDocument.name);
-//~         };
+        app.open(myDocument.fullName);
     } else {
         if (doneAlert) {
             alert('Document Was Not Modified...');
@@ -2824,7 +2822,7 @@ function jobWorkflow () {
             editCheckBox.value = (!changeFileExtension (awFile, ".indd").exists) ? true:false;
             prepressCheckBox.value = (!changeFileExtension (awFile, ".indd").exists) ? true:false;
             saveJobCheckBox.value = (!changeFileExtension (awFile, ".indd").exists) ? true:false;
-            pdfExpCheckBox.value = (!changeFileExtension (awFile, ".indd-lnk.LNK").exists) ? true:false;
+            pdfExpCheckBox.value = (changeFileExtension (awFile, ".indd-lnk.lnk").exists || changeFileExtension (awFile, " - odkaz.lnk").exists) ? false:true;
             thumbnailCheckBox.value = (!changeFileExtension (awFile, ".jpg").exists) ? true:false;
         };
         refresh ();
@@ -2998,6 +2996,7 @@ function makePreview () {
                         artworkEdittext.text = artworkSelected.displayName;
                         workingFolder = artworkFile.parent;
                         saveCheckBox.value = changeFileExtension (artworkFile, "-oneup.indd").exists;
+                        app.activeDocument.close(SaveOptions.NO);
                         artworkPreview (artworkFile);
                     };
                 };
@@ -3042,6 +3041,15 @@ function makePreview () {
                 try { app.activeDocument.close(SaveOptions.NO); } catch (err) {};
                 w.close ();
             };
+        
+        if (artworkFile.exists) {
+            okBtn.enabled = true;
+            artworkSelected = artworkFile;
+            artworkEdittext.text = artworkSelected.displayName;
+            workingFolder = artworkFile.parent;
+            saveCheckBox.value = changeFileExtension (artworkFile, "-oneup.indd").exists;
+            artworkPreview (artworkFile);
+        };
 
         w.show();
 };
@@ -3077,13 +3085,19 @@ function selectArtwork () {
                         workingFolderLabel.text = "Working Folder: " + Folder.decode(workingFolder);
                     };
                 };
-                
+         
+        var makePreviewCheckBox = w.add("checkbox", undefined, "Make Preview");
+            makePreviewCheckBox.value = false; 
+        
         var buttonGroup = w.add ('group {alignment: "right"}');
             var okBtn = buttonGroup.add ("button", undefined, "OK");
                 okBtn.enabled = false;
             buttonGroup.add ("button", undefined, "Cancel");
     
     if (w.show () == 1) {
+        if (makePreviewCheckBox.value) {
+            makePreview();
+        };
         return artworkFile;
     };
 };
