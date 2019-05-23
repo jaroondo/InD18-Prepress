@@ -2780,6 +2780,11 @@ function jobWorkflow () {
         artworkFile = new File();    
     };
     var awFile = (artworkFile.exists) ? artworkFile:selectArtwork ();
+    if (awFile == undefined) {return};
+    if (!changeFileExtension (awFile, ".jpg").exists) {
+        alert("Run Job Workflow again after Artwork Preview saving...");
+        return;
+    };
     
     var w = new Window ("dialog", "Job Workflow for: ");
         w.alignChildren = "left";
@@ -2799,6 +2804,7 @@ function jobWorkflow () {
             p1.g1 = p1.add("group", undefined);
                 p1.g1.orientation = "column";
                 p1.g1.alignChildren = "left";
+//~                 var thumbnailCheckBox = p1.g1.add("checkbox", undefined, "Artwork preview");
                 var editCheckBox = p1.g1.add("checkbox");
                     editCheckBox.text = "Load and Edit One-Up";
                 var prepressCheckBox = p1.g1.add("checkbox", undefined, "Prepress Set-Up");
@@ -2812,7 +2818,7 @@ function jobWorkflow () {
                     p1.g3.alignChildren = "left";
                     var closeCheckBox = p1.g3.add("checkbox", undefined, "Close document");
                         closeCheckBox.value = true;
-                    var thumbnailCheckBox = p1.g3.add("checkbox", undefined, "Artwork preview");
+                    
                 
         var buttonGroup = w.add ('group {alignment: "right"}');
             buttonGroup.add ("button", undefined, "OK");
@@ -2823,11 +2829,16 @@ function jobWorkflow () {
             prepressCheckBox.value = (!changeFileExtension (awFile, ".indd").exists) ? true:false;
             saveJobCheckBox.value = (!changeFileExtension (awFile, ".indd").exists) ? true:false;
             pdfExpCheckBox.value = (changeFileExtension (awFile, ".indd-lnk.lnk").exists || changeFileExtension (awFile, " - odkaz.lnk").exists) ? false:true;
-            thumbnailCheckBox.value = (!changeFileExtension (awFile, ".jpg").exists) ? true:false;
+//~             thumbnailCheckBox.value = (!changeFileExtension (awFile, ".jpg").exists) ? true:false;
         };
         refresh ();
     
     if (w.show () == 1) {
+//~         if (thumbnailCheckBox.value == true) {
+//~             artworkPreview (awFile);
+//~             jpgExport (changeFileExtension (awFile, ".jpg"));
+//~             app.activeDocument.close(SaveOptions.NO);
+//~         };
         if (changeFileExtension (awFile, ".indd").exists) {
             app.open(changeFileExtension (awFile, ".indd"));
         };
@@ -2845,11 +2856,6 @@ function jobWorkflow () {
         };
         if (closeCheckBox.value == true) {
             myDocument.close();
-        };
-        if (thumbnailCheckBox.value == true) {
-            artworkPreview (awFile);
-            jpgExport (changeFileExtension (awFile, ".jpg"));
-            app.activeDocument.close(SaveOptions.NO);
         };
         if (!pdfViewCheckBox.value) {
             alert('Job worklow finished successfully...');
@@ -3019,7 +3025,7 @@ function makePreview () {
             var okBtn = buttonGroup.add ("button", undefined, "OK");
             okBtn.enabled = false;
             okBtn.onClick = function () {
-                if (artworkSelected != undefined) {
+                if (artworkFile != undefined) {
                     if (jpgCheckBox.value) {
                         jpgExport (changeFileExtension (artworkFile, ".jpg"));
                     };
@@ -3083,10 +3089,12 @@ function selectArtwork () {
                         artworkEdittext.text = artworkFile.displayName;
                         workingFolder = artworkFile.parent;
                         workingFolderLabel.text = "Working Folder: " + Folder.decode(workingFolder);
+                        makePreviewCheckBox.value = (changeFileExtension (artworkFile, ".jpg").exists) ? false:true;
                     };
                 };
          
-        var makePreviewCheckBox = w.add("checkbox", undefined, "Make Preview");
+        var makePreviewCheckBox = w.add("checkbox", undefined, "Make Preview for enable Job Workflow is neccessary...");
+            makePreviewCheckBox.characters = 50;
             makePreviewCheckBox.value = false; 
         
         var buttonGroup = w.add ('group {alignment: "right"}');
