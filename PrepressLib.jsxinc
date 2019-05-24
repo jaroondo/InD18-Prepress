@@ -2984,6 +2984,7 @@ function makePreview () {
     if (artworkFile == undefined) {
         artworkFile = new File();    
     };
+    
     var workingFolder = (artworkFile.exists) ? artworkFile.parent:jobPrefs.jobsRootFolder;
     var w = new Window ("palette", "Artwork preview...");
         w.alignChildren = "left";
@@ -3002,7 +3003,9 @@ function makePreview () {
                         artworkEdittext.text = artworkSelected.displayName;
                         workingFolder = artworkFile.parent;
                         saveCheckBox.value = changeFileExtension (artworkFile, "-oneup.indd").exists;
-                        app.activeDocument.close(SaveOptions.NO);
+                        if (app.documents.length > 0 && app.activeDocument.name == "-oneup.indd") {
+                            app.activeDocument.close(SaveOptions.NO);                        
+                        };
                         artworkPreview (artworkFile);
                     };
                 };
@@ -3080,6 +3083,7 @@ function selectArtwork () {
                 p1.g1.add('statictext {text: "Artwork File: ", justify: "left", characters: 8}');
                 var artworkEdittext = p1.g1.add("edittext", undefined,   "Please select artwork file...", {readonly: true, justify: "left"});
                     artworkEdittext.characters = 50;
+                    artworkEdittext.text = (artworkFile.exists) ? artworkFile.displayName:"Please select artwork file...";
                 var artworkBtn = p1.g1.add ("button", undefined, "Select");
                 artworkBtn.onClick = function () {
                     artworkSelected = workingFolder.openDlg ("Select Artwork File", "Normalized PDF: *.pdf, Adobe Illustrator: *.ai, All files: *.*");
@@ -3095,7 +3099,7 @@ function selectArtwork () {
          
         var makePreviewCheckBox = w.add("checkbox", undefined, "Make Preview for enable Job Workflow is neccessary...");
             makePreviewCheckBox.characters = 50;
-            makePreviewCheckBox.value = false; 
+            makePreviewCheckBox.value = (changeFileExtension (artworkFile, ".jpg").exists) ? false:true;
         
         var buttonGroup = w.add ('group {alignment: "right"}');
             var okBtn = buttonGroup.add ("button", undefined, "OK");
@@ -3485,7 +3489,54 @@ function loadOrEditOneUp (doneAlert) {
         return dh.artworkFile;
     };
 };
+function relinkArtworks () {
+    var awFile = selectArtwork ();
+    var startingIndex = 0;
+    var relinkCount = 0;
+    var nextFreeIndex = 0;
+    var w = new Window ("dialog", "Relink artworks...");
+        w.alignChildren = "left";
+        var p1 = w.add ('panel {text: "", borderstyle: "gray", alignChildren: "fill", alignment: "left"}');
+            p1.g1 = p1.add("group");
+                p1.g1.add('statictext {text: "Starting index: ", justify: "left", characters: 10}');
+                var startingIndexEdittext = p1.g1.add("edittext", [0, 0, 72, 20]);
+                    startingIndexEdittext.text = 0;
+                    startingIndexEdittext.onChange = function () {
+                        startingIndex = Number(startingIndexEdittext.text);
+                        nextFreeIndex = startingIndex + relinkCount;
+                        nextfreeIndexEdittext.text = nextFreeIndex;
+                    };
+                    startingIndexEdittext.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (startingIndexEdittext.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1]:[1, 0.5, 0.5, 1]);
+                    };
+            p1.g2 = p1.add("group");
+                p1.g2.add('statictext {text: "Relinking count: ", justify: "left", characters: 10}');
+                var relinkCountEdittext = p1.g2.add("edittext", [0, 0, 72, 20]);
+                    relinkCountEdittext.text = 0;
+                    relinkCountEdittext.onChange = function () {
+                        relinkCount = Number(relinkCountEdittext.text);
+                        nextFreeIndex = startingIndex + relinkCount;
+                        nextfreeIndexEdittext.text = nextFreeIndex;
+                    };
+                    relinkCountEdittext.onChanging = function () {
+                        var valid = /^[\d.]+$/.test (relinkCountEdittext.text);
+                        this.graphics.backgroundColor = this.graphics.newBrush (this.graphics.BrushType.SOLID_COLOR, valid ? [1, 1, 1, 1]:[1, 0.5, 0.5, 1]);
+                    };
+            p1.g3 = p1.add("group");
+                p1.g3.add('statictext {text: "Next free index: ", justify: "left", characters: 10}');
+                var nextfreeIndexEdittext = p1.g3.add("edittext", [0, 0, 72, 20]);
+                    nextfreeIndexEdittext.enabled = false;
+                    nextfreeIndexEdittext.text = nextFreeIndex;
+
+        var buttonGroup = w.add ('group {alignment: "right"}');
+            buttonGroup.add ("button", undefined, "OK");
+            buttonGroup.add ("button", undefined, "Cancel");
+    
+    if (w.show () == 1) {
+
+    };
+};
 //
 // TESTING
-//jobWorkflow ();
-//selectArtwork ();
+relinkArtworks ();
