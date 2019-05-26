@@ -3490,20 +3490,45 @@ function loadOrEditOneUp (doneAlert) {
     };
 };
 function relinkArtworks () {
-    var awFile = selectArtwork ();
+    loadJobPrefs ();
+    if (artworkFile == undefined) {
+        artworkFile = new File();    
+    };
+    var workingFolder = (artworkFile.exists) ? artworkFile.parent:jobPrefs.jobsRootFolder;
+    var awArray = [];
+    var selectedArtworks = awArray.length;
     var startingIndex = 0;
-    var relinkCount = 0;
-    var nextFreeIndex = 0;
+    var relinkCount = 1;
+    var nextFreeIndex = startingIndex + (selectedArtworks * relinkCount);
     var w = new Window ("dialog", "Relink artworks...");
         w.alignChildren = "left";
+        g1 = w.add("group");
+                g1.add('statictext {text: "Selected Files: ", justify: "left", characters: 10}');
+                var artworkEdittext = g1.add("edittext", undefined,   "", {readonly: true, justify: "left"});
+                    artworkEdittext.characters = 5;
+                    artworkEdittext.enabled = false;
+                    artworkEdittext.text = selectedArtworks;
+                var artworkBtn = g1.add ("button", undefined, "Select");
+                artworkBtn.onClick = function () {
+                    awArray = workingFolder.openDlg ("Select Artwork File", "Normalized PDF: *.pdf, Adobe Illustrator: *.ai, All files: *.*", true);
+                    if (awArray.length > 0) {
+                        selectedArtworks = awArray.length;
+                        artworkEdittext.text = selectedArtworks;
+                        nextFreeIndex = startingIndex + (selectedArtworks * relinkCount);
+                        nextfreeIndexEdittext.text = nextFreeIndex;
+                        artworkFile = awArray[0];
+                        workingFolder = artworkFile.parent;
+                    };
+                };
         var p1 = w.add ('panel {text: "", borderstyle: "gray", alignChildren: "fill", alignment: "left"}');
             p1.g1 = p1.add("group");
                 p1.g1.add('statictext {text: "Starting index: ", justify: "left", characters: 10}');
-                var startingIndexEdittext = p1.g1.add("edittext", [0, 0, 72, 20]);
-                    startingIndexEdittext.text = 0;
+                var startingIndexEdittext = p1.g1.add("edittext");
+                startingIndexEdittext.characters = 10;
+                    startingIndexEdittext.text = startingIndex;
                     startingIndexEdittext.onChange = function () {
                         startingIndex = Number(startingIndexEdittext.text);
-                        nextFreeIndex = startingIndex + relinkCount;
+                        nextFreeIndex = startingIndex + (selectedArtworks * relinkCount);
                         nextfreeIndexEdittext.text = nextFreeIndex;
                     };
                     startingIndexEdittext.onChanging = function () {
@@ -3512,11 +3537,12 @@ function relinkArtworks () {
                     };
             p1.g2 = p1.add("group");
                 p1.g2.add('statictext {text: "Relinking count: ", justify: "left", characters: 10}');
-                var relinkCountEdittext = p1.g2.add("edittext", [0, 0, 72, 20]);
-                    relinkCountEdittext.text = 0;
+                var relinkCountEdittext = p1.g2.add("edittext");
+                    relinkCountEdittext.characters = 10;
+                    relinkCountEdittext.text = relinkCount;
                     relinkCountEdittext.onChange = function () {
                         relinkCount = Number(relinkCountEdittext.text);
-                        nextFreeIndex = startingIndex + relinkCount;
+                        nextFreeIndex = startingIndex + (selectedArtworks * relinkCount);
                         nextfreeIndexEdittext.text = nextFreeIndex;
                     };
                     relinkCountEdittext.onChanging = function () {
@@ -3525,7 +3551,8 @@ function relinkArtworks () {
                     };
             p1.g3 = p1.add("group");
                 p1.g3.add('statictext {text: "Next free index: ", justify: "left", characters: 10}');
-                var nextfreeIndexEdittext = p1.g3.add("edittext", [0, 0, 72, 20]);
+                var nextfreeIndexEdittext = p1.g3.add("edittext");
+                    nextfreeIndexEdittext.characters = 10;
                     nextfreeIndexEdittext.enabled = false;
                     nextfreeIndexEdittext.text = nextFreeIndex;
 
