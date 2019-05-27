@@ -1889,13 +1889,21 @@ function prePressMenu () { // Prepress Menu
                makePreview ();
             });
         var previewMenuItem = tasksSubmenu.menuItems.add(previewAction);
- // Job Workflow MenuItem
+        // Relink Artworks SubMenuItem
+        //tasksSubmenu.menuSeparators.add();
+        var relinkAction = app.scriptMenuActions.add("Relink Artworks...");
+            relinkAction.eventListeners.add("onInvoke", function() { 
+               relinkArtworks ();
+            });
+        var relinkMenuItem = tasksSubmenu.menuItems.add(relinkAction);
+ // Select Artwork MenuItem
         prepressMenu.menuSeparators.add();
     var selectArtworkAction = app.scriptMenuActions.add("Select Artwork...");
         selectArtworkAction.eventListeners.add("onInvoke", function() { 
            selectArtwork ();
         });
     var selectArtworkMenuItem = prepressMenu.menuItems.add(selectArtworkAction);
+ // Job Workflow MenuItem    
         prepressMenu.menuSeparators.add();
     var runJobAction = app.scriptMenuActions.add("Job Workflow...");
         runJobAction.eventListeners.add("onInvoke", function() { 
@@ -3490,6 +3498,12 @@ function loadOrEditOneUp (doneAlert) {
     };
 };
 function relinkArtworks () {
+    try {
+        myDocument = app.activeDocument;
+    } catch (myError) {
+        alert("You have not opened any document...");
+        return;
+    };
     loadJobPrefs ();
     if (artworkFile == undefined) {
         artworkFile = new File();    
@@ -3561,9 +3575,23 @@ function relinkArtworks () {
             buttonGroup.add ("button", undefined, "Cancel");
     
     if (w.show () == 1) {
-
+        var changingAlert = false;
+        var awArrayIndex = 0;
+        setProgWinContent ("Relinking artworks...", 0, nextFreeIndex);
+            for (var i = startingIndex; i < nextFreeIndex; ) {
+                for (var j = 0; j < relinkCount; j++) {
+                    myDocument.links[i].relink(awArray[awArrayIndex]);
+                    i++;
+                    if (Math.round(myDocument.links[i].parent.absoluteHorizontalScale) != 100) {
+                        myDocument.links[i].parent.absoluteHorizontalScale = 100;
+                        myDocument.links[i].parent.absoluteVerticalScale = 100;
+                    };
+                };
+                awArrayIndex++;
+                pbar.value = i; progWin.update();
+            };
     };
 };
 //
 // TESTING
-relinkArtworks ();
+//relinkArtworks ();
