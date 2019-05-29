@@ -3514,6 +3514,23 @@ function relinkArtworks () {
     var startingIndex = 0;
     var relinkCount = 1;
     var nextFreeIndex = startingIndex + (selectedArtworks * relinkCount);
+    var endingIndex = nextFreeIndex - 1;
+    var selectedIndexArray = [];
+    
+    if (app.selection.length > 0) {
+        for (var i = 0; i < app.selection.length; i++) {
+            selectedIndexArray.push(app.selection[i].itemLink.index);
+        };
+        selectedIndexArray.sort(function(a, b){return a - b});
+    };
+
+    if (selectedIndexArray.length == 1) {
+        startingIndex = selectedIndexArray[0];
+    } else if (selectedIndexArray.length > 1) {   
+        startingIndex = selectedIndexArray[0];
+        endingIndex = selectedIndexArray[selectedIndexArray.length - 1];
+    };
+
     var w = new Window ("dialog", "Relink artworks...");
         w.alignChildren = "left";
         g1 = w.add("group");
@@ -3573,11 +3590,12 @@ function relinkArtworks () {
         var buttonGroup = w.add ('group {alignment: "right"}');
             buttonGroup.add ("button", undefined, "OK");
             buttonGroup.add ("button", undefined, "Cancel");
-    
+
     if (w.show () == 1) {
         var changingAlert = false;
         var awArrayIndex = 0;
         setProgWinContent ("Relinking artworks...", 0, nextFreeIndex);
+        progWin.show();
             for (var i = startingIndex; i < nextFreeIndex; ) {
                 for (var j = 0; j < relinkCount; j++) {
                     myDocument.links[i].relink(awArray[awArrayIndex]);
@@ -3590,6 +3608,8 @@ function relinkArtworks () {
                 awArrayIndex++;
                 pbar.value = i; progWin.update();
             };
+        progWin.close();
+        alert("Relink Artworks done successfully...");
     };
 };
 //
