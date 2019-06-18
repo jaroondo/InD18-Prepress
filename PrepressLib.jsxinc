@@ -1267,12 +1267,12 @@ function setSxObjectStyles () { // nastavi objektove styly S1 az Sn
     var mixedName = "";
     var usedInks = [];
     for (var i =0 ; i < usedNames.length; i++) { // polia bez duplicity
-        if (usedNames[i].search("_1") >= 0 || usedNames[i].search("_2") >= 0) {
+        if (usedNames[i].search("_2") >= 0) { //usedNames[i].search("_1") >= 0 || 
             subName = usedNames[i].substr(0, usedNames[i].length - 2);
             clearNames.push(subName);
             usedNames[i] = subName;
             for (var j =0 ; j < usedNames.length; j++) { // prehlada a vyhodi dvojca
-                 if (usedNames[j].search(subName + "_1") >= 0 || usedNames[j].search(subName + "_2") >= 0) {
+                 if (usedNames[j].search(subName + "_2") >= 0) { //usedNames[j].search(subName + "_1") >= 0 || 
                      usedNames.splice(j, 1);
                      usedUnderPrints.splice(j, 1);
                  };
