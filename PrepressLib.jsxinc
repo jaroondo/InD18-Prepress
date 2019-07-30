@@ -1746,10 +1746,9 @@ function changeFileExtension (someFile, newExtension) { // newExtension = ".*"
     return File(someFile.fullName.substr(0, someFile.fullName.indexOf(".")) + newExtension);
 };
 function loadOneupStyles () {
-    //app.active Document.loadSwatches (changeFileExtension (artworkFile, "-oneup.indd"));    
-    app.activeDocument.importStyles (ImportFormat.CHARACTER_STYLES_FORMAT, changeFileExtension (artworkFile, "-oneup.indd"), GlobalClashResolutionStrategy.LOAD_ALL_WITH_OVERWRITE);
-    app.activeDocument.importStyles (ImportFormat.PARAGRAPH_STYLES_FORMAT, changeFileExtension (artworkFile, "-oneup.indd"), GlobalClashResolutionStrategy.LOAD_ALL_WITH_OVERWRITE);
-    app.activeDocument.importStyles (ImportFormat.OBJECT_STYLES_FORMAT, changeFileExtension (artworkFile, "-oneup.indd"), GlobalClashResolutionStrategy.LOAD_ALL_WITH_OVERWRITE); 
+    var sourceFile = changeFileExtension (artworkFile, "-oneup.indd");
+    app.activeDocument.importStyles (ImportFormat.TEXT_STYLES_FORMAT, sourceFile);
+    app.activeDocument.importStyles (ImportFormat.OBJECT_STYLES_FORMAT, sourceFile);
 };
 function insertOneupLabel () { 
     var myDocument = app.activeDocument;
@@ -2756,6 +2755,11 @@ function prepressSetup (doneAlert) { // nastavenie celeho pre-pressu
     setProgWinContent ("Used Inks", 0, 2); pbar.value = 1; progWin.update();
         clearCxVariables (); pbar.value = 2; progWin.update();
         usedInksList ();
+    setProgWinContent ("Color Scales", 0, 2); pbar.value = 1; progWin.update();
+        setSxObjectStyles (); 
+        pbar.value = 2; progWin.update();
+        colorScales ();
+        
     if (artworkFile != undefined && changeFileExtension (artworkFile, "-oneup.indd").exists) {  
         setProgWinContent ("Load One-Up Styles", 0, 1); pbar.value = 1; progWin.update();
             loadOneupStyles();
@@ -2773,10 +2777,6 @@ function prepressSetup (doneAlert) { // nastavenie celeho pre-pressu
         //setProgWinContent ("Crop Marks, Logos, Punch Numbers", 0, 1); pbar.value = 0; progWin.update();    
             cropMarkLogoNumber ();
     };
-    setProgWinContent ("Color Scales", 0, 2); pbar.value = 1; progWin.update();
-        setSxObjectStyles (); 
-        pbar.value = 2; progWin.update();
-        colorScales ();
     progWin.hide();
     
     if (doneAlert) {
@@ -3614,4 +3614,4 @@ function relinkArtworks () {
 };
 //
 // TESTING
-//relinkArtworks ();
+//
