@@ -1200,7 +1200,7 @@ function setArtworkVariables () { // priradí "artwork" data do textových preme
 };
 function setWbcVariables () { // priradí data z WebCentra do textových premenných a nastavý znakové styly
     if (myLinkXmp.getProperty("http://my.wbcSchema.namespace/", "customerID").toString() != "") {
-        var artworkID = myLinkXmp.getProperty("http://my.wbcSchema.namespace/", "internalPlantCode").toString().substr(0, 17);
+        var artworkID = myLinkXmp.getProperty("http://my.wbcSchema.namespace/", "internalPlantCode").toString().substr(0, 18);
 //~         var oldFirstLetter = artworkID.charAt (0);
 //~         var shortID = artworkID.slice (1);
 //~         var plateLetter = oldFirstLetter;
