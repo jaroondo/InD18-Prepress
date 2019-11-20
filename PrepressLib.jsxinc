@@ -1,6 +1,6 @@
 ﻿// © 2019 Ing. Jaroslav ONDO
 /**
-* @@@BUILDINFO@@@ PrepressLib.jsxinc !Version! Mon Jan 14 2019 21:26:28 GMT+0100
+* @@@BUILDINFO@@@ PrepressLib.jsxinc !Version! Wed Nov 20 2019 09:48:07 GMT+0100
 */
 #script "Prepress Library"
 #targetengine "session"
@@ -1335,10 +1335,16 @@ function setEgInks () { // nacita XMP data a nastaví egInks properties
             egInks.add();
             with (egInks.lastItem()) { // priradí XMP data
                 name = getXMPInkProperty (i, "name");
+                if (name.toString().charAt (2) == String.fromCharCode(94)) {
+                    name = getXMPInkProperty (i, "name").toString().substr(3);
+                };
                 //name = getXMPInkProperty (i, "egname");
                 type = getXMPInkProperty (i, "type");
                 book = getXMPInkProperty (i, "book");
                 egname = getXMPInkProperty (i, "egname");
+                if (egname.toString().charAt (2) == String.fromCharCode(94)) {
+                    egname = getXMPInkProperty (i, "egname").toString().substr(3);
+                };
                 //frequency = Number(getXMPInkProperty (i, "frequency"));
                 frequency = Number(getXMPsmartInkProperty (i, "coverage"));
                 angle = Number(getXMPInkProperty (i, "angle"));
