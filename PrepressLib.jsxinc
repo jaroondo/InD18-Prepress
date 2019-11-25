@@ -250,7 +250,7 @@ function EgInk() { //definicia objektu esko graphics ink
         var egName = this.egname //.toLowerCase();
         var swatchName = "";
         for (var j = 0; j < mySwatch.count(); j++) {
-            swatchName = mySwatch[j].name //.toLowerCase();
+            swatchName = mySwatch[j].name //.toLowerCase();       
             if (this.type == "pantone") { // ak ide o pantone farbu
                 egName = "PANTONE " + this.egname;
             };
@@ -3621,3 +3621,5 @@ function relinkArtworks () {
 //
 // TESTING
 //
+//~ selectArtwork ();
+//~ jobWorkflow ();
